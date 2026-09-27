@@ -124,15 +124,17 @@ Page({
         this.setData({ selectedType: type, item: null, link: null });
     },
 
-    selection() {
+    selection(forItem = false) {
         const { selected, selectedType } = this.data;
         if (!selected) return null;
-        return { material: selected.detail.itemUrl, platform: selected.platform, materialType: selectedType };
+        const itemId = selected.detail.itemId;
+        const material = forItem && typeof itemId === "string" && itemId.trim() ? itemId.trim() : selected.detail.itemUrl;
+        return { material, platform: selected.platform, materialType: selectedType };
     },
 
     getItem() {
         this.run(async () => {
-            const selected = this.selection();
+            const selected = this.selection(true);
             if (!selected || !["goods", "life"].includes(selected.materialType)) {
                 throw new Error("商品详情只支持已选中的商品或团购物料；活动/直播可直接转链。");
             }
