@@ -18,6 +18,7 @@ Page({
         content: "",
         candidates: [],
         selected: null,
+        selectedIndex: -1,
         selectedType: "goods",
         item: null,
         link: null,
@@ -48,8 +49,9 @@ Page({
                 success: ({ statusCode, data: body }) => {
                     if (statusCode >= 200 && statusCode < 300) return resolve(body);
                     if (body?.code === "SESSION_EXPIRED") {
+                        this.invalidateCandidates();
                         getApp().globalData.session = "";
-                        this.setData({ connected: false, profile: null, records: [], link: null });
+                        this.setData({ connected: false, profile: null, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null });
                     }
                     reject(new Error(body?.message || "服务请求失败，请检查本地 BFF。"));
                 },
@@ -73,22 +75,24 @@ Page({
     connect() {
         this.run(async () => {
             const result = await this.api("login");
+            this.invalidateCandidates();
             getApp().globalData.session = result.session;
             this.setData({
                 connected: true, configured: true, profile: result.profile,
-                candidates: [], selected: null, item: null, link: null,
+                candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
                 records: [], loaded: false,
             });
         });
     },
 
     disconnect() {
+        this.invalidateCandidates();
         this.run(async () => {
             try {
                 await this.api("logout");
             } finally {
                 getApp().globalData.session = "";
-                this.setData({ connected: false, profile: null, candidates: [], selected: null, link: null, records: [], loaded: false });
+                this.setData({ connected: false, profile: null, candidates: [], selected: null, selectedIndex: -1, item: null, link: null, records: [], loaded: false });
             }
         });
     },
@@ -105,17 +109,87 @@ Page({
         this.setData({ content: event.detail.value });
     },
 
+    invalidateCandidates() {
+        this.candidateVersion = (this.candidateVersion || 0) + 1;
+        return this.candidateVersion;
+    },
+
+    itemSelection(candidate, materialType = candidate?.type) {
+        if (!candidate || !["goods", "life"].includes(materialType)) return null;
+        const detail = candidate.detail || {};
+        const itemId = typeof detail.itemId === "string" ? detail.itemId.trim() : "";
+        const material = itemId || detail.itemUrl;
+        return material ? { material, platform: candidate.platform, materialType } : null;
+    },
+
+    itemPreview(item) {
+        const price = item?.price == null ? "" : String(item.price).trim();
+        const coupon = item?.couponInfo?.amount;
+        const rebate = item?.rebateInfo?.rebate;
+        return {
+            title: item?.title || "",
+            imageUrl: item?.imageUrl || "",
+            shopName: item?.shopName || "",
+            price: price && Number.isFinite(Number(price)) ? price : "",
+            coupon: coupon != null && Number(coupon) > 0 ? String(coupon) : "",
+            rebate: item?.rebateInfo?.status != null && item.rebateInfo.status !== -1 && rebate != null && String(rebate).trim() !== "" && Number.isFinite(Number(rebate)) ? String(rebate) : "",
+        };
+    },
+
+    updateCandidate(index, patch, version = this.candidateVersion) {
+        if (version !== this.candidateVersion || !this.data.connected || !this.data.candidates[index]) return;
+        const candidates = this.data.candidates.slice();
+        candidates[index] = { ...candidates[index], ...patch };
+        this.setData({ candidates, ...(this.data.selectedIndex === index ? { selected: candidates[index] } : {}) });
+    },
+
+    async enrichCandidates(version, candidates) {
+        let next = 0;
+        const worker = async () => {
+            while (next < candidates.length && version === this.candidateVersion && this.data.connected) {
+                const index = next++;
+                const selection = this.itemSelection(candidates[index]);
+                if (!selection) continue;
+                try {
+                    const item = (await this.api("item", selection)).data;
+                    this.updateCandidate(index, item ? { preview: this.itemPreview(item), previewState: "ready" } : { previewState: "unavailable" }, version);
+                } catch {
+                    this.updateCandidate(index, { previewState: "unavailable" }, version);
+                }
+            }
+        };
+        await Promise.all([worker(), worker()]);
+    },
+
     parse() {
         this.run(async () => {
+            const version = this.invalidateCandidates();
+            this.setData({ candidates: [], selected: null, selectedIndex: -1, item: null, link: null });
             const candidates = (await this.api("parse", { content: this.data.content })).data;
-            this.setData({ candidates, selected: null, item: null, link: null, notice: candidates.length ? "请选择要推广的候选内容。" : "上游没有返回可用候选，请换一条有效测试物料。" });
+            if (version !== this.candidateVersion || !this.data.connected) return;
+            const cards = candidates.map((candidate) => ({
+                ...candidate,
+                preview: null,
+                previewState: this.itemSelection(candidate) ? "loading" : "unsupported",
+                imageFailed: false,
+                version,
+            }));
+            this.setData({ candidates: cards, selected: null, selectedIndex: -1, item: null, link: null, notice: cards.length ? "请选择要推广的候选内容。" : "上游没有返回可用候选，请换一条有效测试物料。" });
+            void this.enrichCandidates(version, cards);
         });
     },
 
     selectCandidate(event) {
-        const candidate = this.data.candidates[Number(event.currentTarget.dataset.index)];
+        const index = Number(event.currentTarget.dataset.index);
+        const candidate = this.data.candidates[index];
         if (!candidate) return;
-        this.setData({ selected: candidate, selectedType: candidate.type, item: null, link: null, error: "", notice: "" });
+        this.setData({ selected: candidate, selectedIndex: index, selectedType: candidate.type, item: null, link: null, error: "", notice: "" });
+    },
+
+    candidateImageError(event) {
+        const index = Number(event.currentTarget.dataset.index);
+        if (Number(event.currentTarget.dataset.version) !== this.candidateVersion || this.data.candidates[index]?.preview?.imageUrl !== event.currentTarget.dataset.image) return;
+        this.updateCandidate(index, { imageFailed: true });
     },
 
     setType(event) {
@@ -134,12 +208,17 @@ Page({
 
     getItem() {
         this.run(async () => {
-            const selected = this.selection(true);
-            if (!selected || !["goods", "life"].includes(selected.materialType)) {
+            const index = this.data.selectedIndex;
+            const version = this.candidateVersion;
+            const selected = this.itemSelection(this.data.selected, this.data.selectedType);
+            if (!selected) {
                 throw new Error("商品详情只支持已选中的商品或团购物料；活动/直播可直接转链。");
             }
             const item = (await this.api("item", selected)).data;
-            this.setData({ item });
+            if (version !== this.candidateVersion || index !== this.data.selectedIndex || !this.data.connected) return;
+            if (!item) throw new Error("暂未获取到商品详情，请稍后重试。");
+            this.updateCandidate(index, { preview: this.itemPreview(item), previewState: "ready", imageFailed: false }, version);
+            this.setData({ item, notice: "商品详情已更新。" });
         });
     },
 

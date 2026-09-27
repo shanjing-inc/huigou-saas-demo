@@ -30,7 +30,7 @@ function upstream(url, options) {
     } else if (query.includes("mutation Link")) {
         payload = { data: { createPromotionLink: { url: "https://test.example/ref" } } };
     } else if (query.includes("query Item")) {
-        payload = { data: { getPromotionItem: { itemId: "8", title: "Test" } } };
+        payload = { data: { getPromotionItem: { itemId: "8", title: "Test", couponInfo: { amount: "20" } } } };
     } else {
         const name = query.includes("query Orders") ? "listOrders" : query.includes("query Bills") ? "listBills" : "listWithdrawals";
         payload = { data: { [name]: { items: [], hasMore: false } } };
@@ -68,6 +68,9 @@ test("fixed identity, member JWT confinement, candidate, link and empty lists", 
     assert.equal(calls[1].options.headers["x-app-key"], undefined);
     const candidates = await demo.request("parse", { content: "share" }, session);
     assert.equal(candidates[0].platform, "jd");
+    const product = await demo.request("item", { material: "8", platform: "jd", materialType: "goods" }, session);
+    assert.equal(product.couponInfo.amount, "20");
+    assert.match(JSON.parse(calls.at(-1).options.body).query, /couponInfo\s*\{\s*amount\s*\}/);
     const link = await demo.request("link", { material: candidates[0].detail.itemUrl, platform: "jd", materialType: "goods" }, session);
     assert.equal(link.url, "https://test.example/ref");
     for (const action of ["orders", "bills", "withdrawals"]) {

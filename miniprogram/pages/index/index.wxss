@@ -26,7 +26,21 @@ button::after { border: 0; }
 .material-input { width: 100%; height: 170rpx; box-sizing: border-box; border: 1rpx solid #bbcfc3; border-radius: 6rpx; padding: 20rpx; background: #fff; font-size: 26rpx; }
 .subhead { font-size: 26rpx; font-weight: 700; margin: 38rpx 0 16rpx; }
 .candidate,.result { border: 1rpx solid #d6e2d9; background: white; border-radius: 8rpx; margin: 14rpx 0; padding: 22rpx; }
+.candidate { display: flex; align-items: flex-start; gap: 20rpx; }
 .candidate.chosen { border-color: #08755c; background: #f0f8f4; }
+.candidate-photo { width: 180rpx; height: 180rpx; flex-shrink: 0; border-radius: 6rpx; overflow: hidden; background: #edf1ee; }
+.candidate-photo image,.photo-fallback { width: 100%; height: 100%; }
+.photo-fallback { display: flex; align-items: center; justify-content: center; color: #84928a; font-size: 21rpx; }
+.candidate-body { flex: 1; min-width: 0; }
+.candidate-body .candidate-title { line-height: 1.4; max-height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.candidate-offer { display: flex; align-items: center; flex-wrap: wrap; gap: 10rpx; margin-top: 12rpx; }
+.candidate-price { font-size: 30rpx; font-weight: 700; color: #20332e; }
+.candidate-missing { margin-top: 12rpx; font-size: 22rpx; color: #7b8880; }
+.candidate-coupon { background: #ffede5; color: #ae432c; padding: 3rpx 9rpx; border-radius: 6rpx; font-size: 21rpx; }
+.candidate-rebate { display: inline-block; border: 1rpx solid #db6550; border-radius: 6rpx; color: #b74a36; padding: 2rpx 9rpx; margin-top: 10rpx; font-size: 22rpx; }
+.candidate-bottom { display: flex; justify-content: space-between; gap: 10rpx; color: #7b8880; font-size: 21rpx; margin-top: 12rpx; }
+.candidate-shop { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.candidate-state { flex-shrink: 0; }
 .candidate-title,.strong { font-weight: 600; font-size: 26rpx; overflow-wrap: anywhere; }
 .url-text { font-size: 22rpx; color: #286650; overflow-wrap: anywhere; line-height: 1.5; margin-top: 10rpx; }
 .type-row { display: flex; flex-wrap: wrap; gap: 12rpx; }

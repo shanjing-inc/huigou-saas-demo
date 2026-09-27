@@ -40,10 +40,26 @@
             <textarea class="material-input" maxlength="4096" placeholder="粘贴已开通联盟的测试分享文案或商品链接" value="{{content}}" bindinput="updateContent" />
             <button class="primary" loading="{{busy}}" disabled="{{busy || !content}}" bindtap="parse">解析内容</button>
             <view wx:if="{{candidates.length}}" class="subhead">候选内容 · {{candidates.length}}</view>
-            <view wx:for="{{candidates}}" wx:key="index" class="candidate {{selected.keyContent === item.keyContent ? 'chosen' : ''}}" data-index="{{index}}" bindtap="selectCandidate">
-                <view class="candidate-title">{{item.detail.itemTitle || item.platform}}</view>
-                <view class="meta">{{item.platform}} · {{item.type}} · {{item.detail.itemId || '无商品 ID'}}</view>
-                <view class="url-text">{{item.detail.itemUrl}}</view>
+            <view wx:for="{{candidates}}" wx:key="index" class="candidate {{selectedIndex === index ? 'chosen' : ''}}" data-index="{{index}}" bindtap="selectCandidate">
+                <view class="candidate-photo">
+                    <image wx:if="{{item.preview.imageUrl && !item.imageFailed}}" src="{{item.preview.imageUrl}}" mode="aspectFill" lazy-load="true" data-index="{{index}}" data-version="{{item.version}}" data-image="{{item.preview.imageUrl}}" binderror="candidateImageError" />
+                    <view wx:else class="photo-fallback">暂无图片</view>
+                </view>
+                <view class="candidate-body">
+                    <view class="candidate-title">{{item.preview.title || item.detail.itemTitle || (item.type === 'goods' || item.type === 'life' ? '商品信息待补充' : '候选物料')}}</view>
+                    <view wx:if="{{item.preview.price || item.preview.coupon}}" class="candidate-offer">
+                        <text wx:if="{{item.preview.price}}" class="candidate-price">¥{{item.preview.price}}</text>
+                        <text wx:if="{{item.preview.coupon}}" class="candidate-coupon">{{item.preview.coupon}} 元券</text>
+                    </view>
+                    <view wx:elif="{{item.previewState === 'ready'}}" class="candidate-missing">价格未提供</view>
+                    <view wx:if="{{item.preview.rebate}}" class="candidate-rebate">再返 ¥{{item.preview.rebate}}</view>
+                    <view class="candidate-bottom">
+                        <text class="candidate-shop">{{item.preview.shopName || item.platform}}</text>
+                        <text wx:if="{{item.previewState === 'loading'}}" class="candidate-state">详情加载中</text>
+                        <text wx:elif="{{item.previewState === 'unavailable'}}" class="candidate-state">详情暂不可用</text>
+                        <text wx:elif="{{item.previewState === 'unsupported'}}" class="candidate-state">非商品物料</text>
+                    </view>
+                </view>
             </view>
             <block wx:if="{{selected}}">
                 <view class="subhead">已选候选 · {{selected.platform}}</view>
@@ -54,13 +70,8 @@
                     <view class="type {{selectedType === 'life' ? 'selected' : ''}}" data-type="life" bindtap="setType">团购</view>
                 </view>
                 <view class="actions">
-                    <button class="quiet half" disabled="{{busy}}" bindtap="getItem">查商品详情</button>
+                    <button class="quiet half" disabled="{{busy || (selectedType !== 'goods' && selectedType !== 'life')}}" bindtap="getItem">刷新商品详情</button>
                     <button class="primary half" disabled="{{busy}}" loading="{{busy}}" bindtap="createLink">生成转链</button>
-                </view>
-                <view wx:if="{{item}}" class="result">
-                    <view class="candidate-title">{{item.title}}</view>
-                    <view class="meta">商品 ID {{item.itemId}} · 价格 ¥ {{item.price || '未知'}}</view>
-                    <view class="meta">预估返利 ¥ {{item.rebateInfo.rebate || '未知'}}</view>
                 </view>
                 <view wx:if="{{link}}" class="result">
                     <view class="subhead">推广结果 <text class="eyebrow">LIVE TEST</text></view>

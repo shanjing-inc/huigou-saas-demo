@@ -24,7 +24,7 @@ export const operations = Object.freeze({
         endpoint: "member",
         query: `query Item($material: String!, $platform: PromotionPlatform!, $materialType: PromotionMaterialType) {
             getPromotionItem(material: $material, platform: $platform, materialType: $materialType) {
-                itemId title platform price imageUrl shopName rebateInfo { rebate status }
+                itemId title platform price imageUrl shopName couponInfo { amount } rebateInfo { rebate status }
             }
         }`,
         field: "getPromotionItem",
