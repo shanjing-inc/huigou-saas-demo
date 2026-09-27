@@ -24,8 +24,9 @@ export function loadConfig(env) {
     } catch {
         throw new DemoError("CONFIG", "请在 BFF 私有配置中设置测试服务地址。", 503);
     }
-    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
-        throw new DemoError("CONFIG", "测试服务地址须为 HTTPS 站点根地址。", 503);
+    const localHttp = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
+    if ((url.protocol !== "https:" && !localHttp) || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
+        throw new DemoError("CONFIG", "测试服务地址须为 HTTPS 站点根地址，或本机回环地址的 HTTP 开发服务。", 503);
     }
     const keys = ["DEMO_APP_KEY", "DEMO_APP_SECRET", "DEMO_OPENID"];
     if (keys.some((key) => !env[key] || env[key].startsWith("replace-with-"))) {

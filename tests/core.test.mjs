@@ -40,6 +40,12 @@ function upstream(url, options) {
 
 test("validates isolated configuration and signs sorted GraphQL variables", () => {
     assert.throws(() => loadConfig({ ...env, DEMO_API_BASE_URL: "http://example.com" }), /HTTPS/);
+    for (const base of ["http://localhost:4322", "http://127.0.0.1:4322"]) {
+        assert.equal(loadConfig({ ...env, DEMO_API_BASE_URL: base }).base, base);
+    }
+    for (const base of ["http://127.0.0.1.evil.example:4322", "http://[::1]:4322", "http://localhost:4322/other", "http://user:pass@localhost:4322"]) {
+        assert.throws(() => loadConfig({ ...env, DEMO_API_BASE_URL: base }), /HTTPS/);
+    }
     assert.throws(() => loadConfig({ ...env, DEMO_APP_SECRET: "replace-with-secret" }), /隔离测试/);
     const vars = { teamId: 34, openid: "test-only-openid", organizationId: 12 };
     assert.equal(sign(vars, config.secret), createHash("md5").update("openid=test-only-openid&organizationId=12&teamId=34test-secret").digest("hex"));
