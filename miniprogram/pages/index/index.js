@@ -9,6 +9,8 @@ Page({
     data: {
         demo: true,
         configured: false,
+        backendReachable: false,
+        checkingBackend: false,
         mode: "profile",
         connected: false,
         busy: false,
@@ -28,11 +30,29 @@ Page({
         loaded: false,
     },
 
-    onLoad() {
+    onShow() {
+        this.checkBackend();
+    },
+
+    checkBackend() {
+        if (this.data.checkingBackend || this.data.connected) return;
+        this.setData({ checkingBackend: true });
         wx.request({
             url: `${BASE}/api/status`,
-            success: ({ data }) => this.setData({ configured: Boolean(data?.configured) }),
-            fail: () => this.setData({ error: "本机后端未启动，请先按 README 在本机启动。" }),
+            success: ({ statusCode, data }) => {
+                const backendReachable = statusCode === 200 && data?.demo === true;
+                this.setData({
+                    backendReachable,
+                    configured: backendReachable && Boolean(data.configured),
+                    error: backendReachable ? "" : "本机端口未返回 Demo 后端状态，请检查服务和端口。",
+                });
+            },
+            fail: () => this.setData({
+                backendReachable: false,
+                configured: false,
+                error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
+            }),
+            complete: () => this.setData({ checkingBackend: false }),
         });
     },
 

@@ -9,7 +9,8 @@
     <view wx:if="{{!connected}}" class="section">
         <view class="section-head">测试成员</view>
         <view class="hint">身份和应用凭证仅由本机后端提供；小程序不会调用微信登录。</view>
-        <view wx:if="{{!configured}}" class="empty">尚未配置隔离测试凭证。请先检查本机 .env。</view>
+        <view wx:if="{{backendReachable && !configured}}" class="empty">尚未配置隔离测试凭证。请检查本机 .env 并重启后端。</view>
+        <button wx:if="{{!configured}}" class="quiet" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重新检测本机后端</button>
         <button class="primary" disabled="{{busy || !configured}}" loading="{{busy}}" bindtap="connect">连接测试环境</button>
     </view>
 

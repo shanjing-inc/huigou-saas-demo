@@ -22,6 +22,41 @@ const candidate = (itemId, itemUrl = `https://example.test/${itemId}`) => ({
     platform: "jd", type: "goods", keyContent: "same share text", detail: { itemId, itemUrl, itemTitle: `商品 ${itemId}` },
 });
 
+test("status check can recover after the backend starts", () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.connected = false;
+    page.onShow();
+    assert.equal(requests[0].url, "http://127.0.0.1:8787/api/status");
+    assert.equal(page.data.checkingBackend, true);
+    requests[0].fail();
+    requests[0].complete();
+    assert.equal(page.data.backendReachable, false);
+    assert.match(page.data.error, /无法访问本机后端/);
+
+    page.checkBackend();
+    requests[1].success({ statusCode: 200, data: { demo: true, configured: true } });
+    requests[1].complete();
+    assert.equal(page.data.backendReachable, true);
+    assert.equal(page.data.configured, true);
+    assert.equal(page.data.checkingBackend, false);
+    assert.equal(page.data.error, "");
+});
+
+test("status check rejects a different local service", () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.connected = false;
+    page.onShow();
+    page.checkBackend();
+    assert.equal(requests.length, 1);
+    requests[0].success({ statusCode: 200, data: { configured: true } });
+    requests[0].complete();
+    assert.equal(page.data.backendReachable, false);
+    assert.equal(page.data.configured, false);
+    assert.match(page.data.error, /未返回 Demo 后端状态/);
+});
+
 test("item lookup uses parsed product ID while conversion keeps the candidate URL", async () => {
     const requests = [];
     const page = mountPage((options) => {
