@@ -8,7 +8,7 @@ description: 对接返利项目合作方 GraphQL API 时使用；帮助 AI 查�
 ## 先确认接口与范围
 
 1. 向对接人确认**实际目标环境**的 HTTPS 根地址、已授权的组织/Team、应用凭证及隔离测试成员；不要从 Demo、截图或文档推断生产授权。仅用可信后端保存 App Secret 和成员 Token，不把凭证贴进对话、代码、命令参数或日志。
-2. 浏览该环境的 `GET /api/graphql/application` 和 `GET /api/graphql/member`（GraphiQL），或对同一路径执行**纯 Schema 自省**。前者是应用级字段，后者是成员级字段；自省可匿名读取元数据，执行业务字段仍需鉴权。开发中的 SaaS 项目可对照 `src/graphql/generated/application-schema.graphql` 和 `src/graphql/generated/member-schema.graphql`；对外交付以目标环境实时 Schema 为准。`/test/service-graphiql` 是开发态调试页，生产不可用。
+2. 浏览该环境的 `GET /api/graphql/application` 和 `GET /api/graphql/member`（GraphiQL），或对同一路径执行**纯 Schema 自省**。前者是应用级字段，后者是成员级字段；自省可匿名读取元数据，执行业务字段仍需鉴权。
 3. 从 Schema 的 `Query` / `Mutation` 根字段、参数类型、字段说明、返回字段及错误码确认操作；以已开通组织、商城和物料能力为准，Schema 有字段不意味着该身份获得授权。Demo 只实现其中一小部分（见 `backend/queries.mjs`），不是 API 全集；不要为不存在的能力补造字段或数据。
 
 ## 用户提供的联调商品链接
