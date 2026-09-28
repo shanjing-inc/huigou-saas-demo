@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="light" />
+        <meta
+            name="description"
+            content="合作方接入返利服务：用一页看清双方职责、接入路线和核对要点。"
+        />
+        <title>合作方接入指南 · 返利服务</title>
+        <style>
+            :root {
+                --ink: #12312c;
+                --muted: #45615a;
+                --green: #136e55;
+                --line: #d7e5df;
+                --paper: #f7f9f5;
+                --white: #fff;
+                --mint: #e4f4eb;
+                --amber: #a45b21;
+                --warm: #fff3e1;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html {
+                scroll-behavior: smooth;
+            }
+            body {
+                margin: 0;
+                color: var(--ink);
+                background: var(--paper);
+                font:
+                    16px/1.65 -apple-system,
+                    BlinkMacSystemFont,
+                    "PingFang SC",
+                    "Microsoft YaHei",
+                    sans-serif;
+            }
+            a {
+                color: var(--green);
+                text-underline-offset: 0.2em;
+            }
+            a:focus-visible,
+            summary:focus-visible {
+                outline: 3px solid var(--amber);
+                outline-offset: 4px;
+            }
+            h1,
+            h2,
+            h3,
+            p {
+                margin-top: 0;
+            }
+            h1 {
+                font-size: clamp(2.4rem, 6.5vw, 5rem);
+                line-height: 1.13;
+                letter-spacing: -0.045em;
+            }
+            h2 {
+                font-size: clamp(1.7rem, 3.4vw, 2.6rem);
+                line-height: 1.25;
+                letter-spacing: -0.025em;
+            }
+            h3 {
+                font-size: 1.1rem;
+            }
+            .wrap {
+                width: min(1100px, calc(100% - 40px));
+                margin: 0 auto;
+            }
+            .skip {
+                position: absolute;
+                top: -80px;
+                left: 16px;
+                z-index: 4;
+                padding: 10px;
+                background: white;
+            }
+            .skip:focus {
+                top: 12px;
+            }
+            .top {
+                border-bottom: 1px solid var(--line);
+                background: var(--white);
+            }
+            .top .wrap {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 10px 24px;
+                min-height: 70px;
+            }
+            .brand {
+                font-weight: 800;
+                letter-spacing: -0.02em;
+            }
+            .brand::before {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                margin-right: 10px;
+                border-radius: 4px;
+                background: var(--green);
+                content: "";
+            }
+            nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px 22px;
+                padding: 12px 0;
+                font-size: 0.88rem;
+                font-weight: 700;
+            }
+            nav a {
+                color: var(--ink);
+                text-decoration: none;
+            }
+            nav a:hover {
+                text-decoration: underline;
+            }
+            .hero {
+                overflow: hidden;
+                padding: clamp(60px, 9vw, 116px) 0 76px;
+                background:
+                    radial-gradient(circle at 77% 28%, #bbddc7, transparent 36%),
+                    linear-gradient(125deg, #f8faf5, #e8f3ea);
+            }
+            .hero-grid {
+                display: grid;
+                grid-template-columns: minmax(0, 1.45fr) minmax(290px, 0.8fr);
+                align-items: center;
+                gap: 50px;
+            }
+            .eyebrow {
+                display: block;
+                margin-bottom: 15px;
+                color: var(--green);
+                font-size: 0.8rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .hero h1 {
+                max-width: 700px;
+                margin-bottom: 18px;
+                font-size: clamp(2.4rem, 5vw, 4rem);
+            }
+            .hero h1 em {
+                color: var(--green);
+                font-style: normal;
+            }
+            .lead {
+                max-width: 580px;
+                color: var(--muted);
+                font-size: 1.1rem;
+            }
+            .actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-top: 30px;
+            }
+            .button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 46px;
+                padding: 10px 19px;
+                border: 1px solid var(--green);
+                border-radius: 9px;
+                background: var(--green);
+                color: white;
+                font-weight: 700;
+                text-decoration: none;
+            }
+            .button.secondary {
+                background: transparent;
+                color: var(--green);
+            }
+            .summary {
+                padding: 24px;
+                border: 1px solid #c7ded1;
+                border-radius: 19px;
+                background: rgba(255, 255, 255, 0.84);
+                box-shadow: 0 25px 70px #16372a13;
+            }
+            .summary strong {
+                display: block;
+                font-size: 1.15rem;
+            }
+            .summary ol {
+                margin: 18px 0 0;
+                padding: 0;
+                list-style: none;
+            }
+            .summary li {
+                position: relative;
+                margin-left: 18px;
+                padding: 0 0 22px 26px;
+                border-left: 2px solid #a8d5bb;
+            }
+            .summary li:last-child {
+                padding-bottom: 0;
+                border-color: transparent;
+            }
+            .summary li::before {
+                position: absolute;
+                top: 4px;
+                left: -8px;
+                width: 12px;
+                height: 12px;
+                border: 2px solid white;
+                border-radius: 50%;
+                background: var(--green);
+                content: "";
+            }
+            .summary span {
+                display: block;
+                color: var(--muted);
+                font-size: 0.87rem;
+            }
+            main section {
+                padding: 77px 0 0;
+                scroll-margin-top: 20px;
+            }
+            .intro {
+                max-width: 680px;
+                color: var(--muted);
+            }
+            .demo-source {
+                margin-top: 24px;
+            }
+            .ai-prompt {
+                margin: 22px 0 0;
+                padding: 16px 19px;
+                border-left: 4px solid var(--green);
+                background: var(--white);
+                overflow-wrap: anywhere;
+            }
+            .cards {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 16px;
+                margin-top: 26px;
+            }
+            .card {
+                padding: 25px;
+                border: 1px solid var(--line);
+                border-radius: 15px;
+                background: var(--white);
+            }
+            .card .num {
+                display: inline-grid;
+                place-items: center;
+                width: 37px;
+                height: 37px;
+                margin-bottom: 16px;
+                border-radius: 10px;
+                background: var(--mint);
+                color: var(--green);
+                font-size: 0.85rem;
+                font-weight: 800;
+            }
+            .card h3 {
+                margin-bottom: 7px;
+            }
+            .card p {
+                margin-bottom: 0;
+                color: var(--muted);
+                font-size: 0.93rem;
+            }
+            .rail {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 12px;
+                margin: 28px 0 8px;
+                padding: 0;
+                list-style: none;
+            }
+            .rail li {
+                position: relative;
+                padding: 18px 9px;
+                border-radius: 11px;
+                background: #e8f3e9;
+                color: #154a3a;
+                text-align: center;
+                font-size: 0.87rem;
+                font-weight: 800;
+            }
+            .rail li:not(:last-child)::after {
+                position: absolute;
+                right: -14px;
+                color: var(--green);
+                content: "→";
+            }
+            .note {
+                margin: 18px 0 0;
+                padding: 16px 19px;
+                border-left: 4px solid var(--amber);
+                border-radius: 0 9px 9px 0;
+                background: var(--warm);
+                color: #553b28;
+            }
+            .split {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 16px;
+                margin-top: 23px;
+            }
+            .split .card:first-child {
+                border-top: 4px solid var(--green);
+            }
+            .split .card:last-child {
+                border-top: 4px solid var(--amber);
+            }
+            ul {
+                margin: 8px 0 0;
+                padding-left: 22px;
+            }
+            li + li {
+                margin-top: 6px;
+            }
+            .step {
+                display: grid;
+                grid-template-columns: 44px 1fr;
+                gap: 20px;
+                padding: 22px 0;
+                border-bottom: 1px solid var(--line);
+            }
+            .step:first-of-type {
+                border-top: 1px solid var(--line);
+            }
+            .step b {
+                display: grid;
+                place-items: center;
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                background: var(--ink);
+                color: white;
+                font-size: 0.86rem;
+            }
+            .step p {
+                margin: 4px 0 0;
+                color: var(--muted);
+            }
+            code {
+                padding: 2px 5px;
+                border-radius: 4px;
+                background: #eaf2ee;
+                color: #185440;
+                font-size: 0.91em;
+                overflow-wrap: anywhere;
+            }
+            .glossary {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 12px;
+                margin-top: 23px;
+            }
+            .glossary .card {
+                padding: 18px 22px;
+            }
+            details {
+                margin-top: 10px;
+                padding: 15px 20px;
+                border: 1px solid var(--line);
+                border-radius: 9px;
+                background: white;
+            }
+            summary {
+                cursor: pointer;
+                font-weight: 700;
+            }
+            details p {
+                margin: 12px 0 0;
+                color: var(--muted);
+            }
+            .foot {
+                margin-top: 78px;
+                padding: 35px 0;
+                border-top: 1px solid var(--line);
+                color: var(--muted);
+                font-size: 0.85rem;
+            }
+            @media (max-width: 800px) {
+                .hero-grid {
+                    grid-template-columns: 1fr;
+                    gap: 27px;
+                }
+                .cards {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+            @media (max-width: 580px) {
+                .wrap {
+                    width: min(100% - 30px, 1100px);
+                }
+                .hero {
+                    padding: 55px 0;
+                }
+                main section {
+                    padding-top: 60px;
+                }
+                .cards,
+                .split,
+                .glossary {
+                    grid-template-columns: 1fr;
+                }
+                .rail {
+                    grid-template-columns: 1fr;
+                    gap: 6px;
+                }
+                .rail li {
+                    padding: 10px;
+                }
+                .rail li:not(:last-child)::after {
+                    right: 50%;
+                    bottom: -14px;
+                    content: "↓";
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                html {
+                    scroll-behavior: auto;
+                }
+            }
+            @media print {
+                .hero,
+                main section {
+                    padding: 26px 0;
+                }
+                .top {
+                    display: none;
+                }
+                .card,
+                .step,
+                details {
+                    break-inside: avoid;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <a class="skip" href="#content">跳到正文</a>
+        <header class="top">
+            <div class="wrap">
+                <div class="brand">合作方接入 · 返利服务</div>
+                <nav aria-label="页面目录">
+                    <a href="#journey">业务路线</a><a href="#start">三步接入</a
+                    ><a href="#ai">AI 接入</a><a href="#roles">双方职责</a><a href="#terms">名词</a
+                    ><a href="#faq">排查</a>
+                </nav>
+            </div>
+        </header>
+        <div class="hero">
+            <div class="wrap hero-grid">
+                <div>
+                    <span class="eyebrow">Partner onboarding / 联调预览版</span>
+                    <h1>一次接入，<br /><em>串起完整返利旅程。</em></h1>
+                    <p class="lead">
+                        先弄懂业务怎么走，再决定调用哪些接口。这里没有要你先背下来的字段表，也不会索取你的密钥。
+                    </p>
+                    <div class="actions">
+                        <a class="button" href="#start">从三步接入开始 ↗</a
+                        ><a class="button secondary" href="#journey">先看业务全貌</a>
+                    </div>
+                </div>
+                <aside class="summary" aria-label="接入速览">
+                    <strong>你的第一小时</strong>
+                    <ol>
+                        <li>准备组织与应用<span>凭证仅放在可信后端</span></li>
+                        <li>后端签名完成登录<span>获得对应成员的 Token</span></li>
+                        <li>用 Token 读取资料<span>验证身份与钱包范围</span></li>
+                    </ol>
+                </aside>
+            </div>
+        </div>
+        <main id="content" class="wrap">
+            <section id="journey" aria-labelledby="journey-title">
+                <span class="eyebrow">01 / 场景总览</span>
+                <h2 id="journey-title">从分享商品到用户收到返利</h2>
+                <p class="intro">
+                    使用顺序可以很短：先开通身份，再转链、看单、结算和提现。实际支持的平台及物料类型，以组织配置与上游能力为准。
+                </p>
+                <ol class="rail" aria-label="返利流程">
+                    <li>用户认证</li>
+                    <li>生成推广入口</li>
+                    <li>用户下单</li>
+                    <li>订单结算</li>
+                    <li>提现处理</li>
+                </ol>
+                <div class="cards">
+                    <article class="card">
+                        <span class="num">A</span>
+                        <h3>身份与团队</h3>
+                        <p>
+                            合作方后端管理应用凭证和组织授权；成员登录后拥有特定 Team 下的返利身份。
+                        </p>
+                    </article>
+                    <article class="card">
+                        <span class="num">B</span>
+                        <h3>商品与推广</h3>
+                        <p>
+                            解析素材、按需查询商品、生成推广入口。具体能力以已开通的商城和物料为准。
+                        </p>
+                    </article>
+                    <article class="card">
+                        <span class="num">C</span>
+                        <h3>订单与钱包</h3>
+                        <p>
+                            查看订单和账单，区分预估返利、待结算金额与可用余额；待结算金额还包含在途提现本金。
+                        </p>
+                    </article>
+                </div>
+                <p class="note">
+                    <strong>别误解：</strong
+                    >转链成功不等于产生订单；预估返利不等于最终到账。订单归属和结算仍需等待上游回传及业务处理。
+                </p>
+            </section>
+            <section id="start" aria-labelledby="start-title">
+                <span class="eyebrow">02 / 最短接入</span>
+                <h2 id="start-title">只做三步，先证明身份链路通了</h2>
+                <p class="intro">
+                    请先准备测试用 App Key/Secret、组织 ID、Team ID，以及合作方已认证用户的可信
+                    OpenID。不要把真实密钥贴入网页、截图或聊天消息。
+                </p>
+                <div class="step">
+                    <b>01</b>
+                    <div>
+                        <h3>在后端保管凭证</h3>
+                        <p>
+                            我方开通应用、组织及商城推广能力。你的后端按当前接口规则计算签名；不要让浏览器或小程序直接拿
+                            App Secret。
+                        </p>
+                    </div>
+                </div>
+                <div class="step">
+                    <b>02</b>
+                    <div>
+                        <h3>后端调用 <code>login</code></h3>
+                        <p>
+                            向 <code>/api/graphql/application</code> 发送可信 OpenID、组织与 Team
+                            范围，用请求头带 App Key、时间戳与签名，取得成员 Token。
+                        </p>
+                    </div>
+                </div>
+                <div class="step">
+                    <b>03</b>
+                    <div>
+                        <h3>成员调用 <code>getProfile</code></h3>
+                        <p>
+                            用 <code>Authorization: Bearer &lt;token&gt;</code> 查询
+                            <code>/api/graphql/member</code
+                            >，确认返回的是目标成员身份与钱包数据。切换组织/Team 要重新登录。
+                        </p>
+                    </div>
+                </div>
+                <p class="note">
+                    <strong>下一步：</strong>根据场景选
+                    <code>parsePromotionMaterial</code
+                    >、<code>getPromotionItem</code>、<code>createPromotionLink</code>、<code>listOrders</code>、<code>listBills</code>；以下是正式环境的
+                    <a href="https://saas.tbxzs.cn/api/graphql/application">application Schema</a>
+                    /
+                    <a href="https://saas.tbxzs.cn/api/graphql/member">member Schema</a>
+                    参考入口。联调时以实际交付环境的同路径 Schema 为准；这页不复制第二份接口字段表。
+                </p>
+                <p class="intro demo-source">
+                    <strong>联调 Demo 源码：</strong>本指南与原生微信小程序、本机后端同在
+                    <a href="https://github.com/shanjing-inc/huigou-saas-demo">Demo Git 仓库</a
+                    >；HTTPS 克隆地址为
+                    <code>https://github.com/shanjing-inc/huigou-saas-demo.git</code>。源码位于
+                    <code>master</code> 分支。仓库需要 GitHub 访问权限，启动与交接请阅读仓库的
+                    <code>README.md</code> 和 <code>docs/handover.md</code>。此 Demo
+                    仅用于隔离测试，固定身份登录不能用于生产。
+                </p>
+            </section>
+            <section id="ai" aria-labelledby="ai-title">
+                <span class="eyebrow">03 / AI 辅助接入</span>
+                <h2 id="ai-title">让 AI 读懂接口，再开始联调</h2>
+                <p class="intro">
+                    Demo 仓库的 <code>skills/partner-rebate-api/SKILL.md</code>
+                    是 AI 对接入口：说明应用签名、成员 Token、GraphQL 文档查询及功能边界。先取得
+                    <a href="https://github.com/shanjing-inc/huigou-saas-demo">Demo 仓库</a>
+                    的访问权限，再让 AI 读取它。
+                </p>
+                <div class="step">
+                    <b>01</b>
+                    <div>
+                        <h3>让 AI 加载 skill</h3>
+                        <p>
+                            将 Demo 仓库的 <code>skills/partner-rebate-api/</code> 目录放入 AI
+                            工具的技能目录（如 Codex 的
+                            <code>$CODEX_HOME/skills/partner-rebate-api/</code
+                            >），或直接让有仓库访问权限的 AI 读取该目录下的
+                            <code>SKILL.md</code>。只发送仓库链接不会自动安装 skill。
+                        </p>
+                    </div>
+                </div>
+                <div class="step">
+                    <b>02</b>
+                    <div>
+                        <h3>给出任务和授权范围</h3>
+                        <p>
+                            提供目标环境的地址、需要核对的功能及允许执行的隔离测试操作；凭证只在可信后端私下配置，切勿发进
+                            AI 对话。可直接使用下方指令：
+                        </p>
+                    </div>
+                </div>
+                <blockquote class="ai-prompt">
+                    请先读取 huigou-saas-demo 仓库中的
+                    <code>skills/partner-rebate-api/SKILL.md</code>
+                    及其按需引用的文档，查看我方提供的测试环境 application/member GraphQL
+                    Schema，告诉我目标功能的字段、鉴权和调用顺序；先只进行只读分析，未经我确认不要调用写入或资金接口。
+                </blockquote>
+                <p class="note">
+                    <strong>权限边界：</strong>skill 不含密钥、不自动赋予接口权限。Demo
+                    仅支持隔离测试的固定操作；正式接入须使用可信登录的真实用户 OpenID。目标环境
+                    Schema、组织授权和商城开通范围共同决定实际可用能力。
+                </p>
+            </section>
+            <section id="roles" aria-labelledby="roles-title">
+                <span class="eyebrow">04 / 责任边界</span>
+                <h2 id="roles-title">谁来做，先分清</h2>
+                <div class="split">
+                    <article class="card">
+                        <h3>我们负责</h3>
+                        <ul>
+                            <li>开通服务、组织及授权。</li>
+                            <li>提供转链、订单、返利和资金记录接口。</li>
+                            <li>说明各商城和物料能力的实际开通范围。</li>
+                        </ul>
+                    </article>
+                    <article class="card">
+                        <h3>合作方负责</h3>
+                        <ul>
+                            <li>认证自己的用户，完成页面和后端集成。</li>
+                            <li>安全保管密钥、成员 Token 与收款资料。</li>
+                            <li>如承担提现处理，核对资料、执行真实人工打款并登记结果。</li>
+                        </ul>
+                    </article>
+                </div>
+                <p class="note">
+                    <strong>提现流程请核对交付环境：</strong>审核要求和处理节点请按交付环境的 Schema
+                    与处理方确认；未经确认，不要将免审核、申请即待打款作为可用能力。系统登记打款结果不代替真实转账。
+                </p>
+            </section>
+            <section id="terms" aria-labelledby="terms-title">
+                <span class="eyebrow">05 / 常用名词</span>
+                <h2 id="terms-title">三个关系，减少误会</h2>
+                <div class="glossary">
+                    <div class="card">
+                        <h3>应用 ≠ 成员</h3>
+                        <p>
+                            应用代表合作方系统，用密钥签名；成员代表用户在特定 Team 的身份，用自己的
+                            Token。
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3>组织 → Team → 成员</h3>
+                        <p>
+                            组织划定授权范围，Team 管理成员归属；同一用户可以对应不同 Team
+                            的成员身份。
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3>可用余额 ≠ 待结算</h3>
+                        <p>
+                            能申请提现的是可用余额；待结算金额包含未结算返利与在途提现本金，不能重复提现。预估返利也不表示已经到账。
+                        </p>
+                    </div>
+                </div>
+            </section>
+            <section id="faq" aria-labelledby="faq-title">
+                <span class="eyebrow">06 / 遇到问题</span>
+                <h2 id="faq-title">先检查这几处</h2>
+                <details>
+                    <summary>签名或登录失败？</summary>
+                    <p>
+                        对照实际发送的 GraphQL variables、App
+                        Key、秒级时间戳与服务端签名约定；确认组织授权和用户 OpenID
+                        来自可信登录结果。
+                    </p>
+                </details>
+                <details>
+                    <summary>转链成功，但订单没出现？</summary>
+                    <p>
+                        先核对推广入口、商城与成员范围，再等待上游回单及业务处理；不要用转链结果代替订单事实。
+                    </p>
+                </details>
+                <details>
+                    <summary>切换 Team 后查到旧数据？</summary>
+                    <p>
+                        重新登录获取新成员 Token；Token 的组织和 Team
+                        范围不会因为前端选择器变化而改变。
+                    </p>
+                </details>
+                <p class="intro">
+                    联调问题请提供接口名、请求时间、脱敏变量与错误码；切勿发送 App Secret、完整
+                    Token 或收款资料。
+                </p>
+            </section>
+        </main>
+        <footer class="foot">
+            <div class="wrap">
+                返利服务 · 合作方接入说明（未正式对外交接）<br />本页是只读的业务引导，不是可运行
+                Demo；接口与提现流程以目标环境和双方确认的交付版本为准。
+            </div>
+        </footer>
+    </body>
+</html>
