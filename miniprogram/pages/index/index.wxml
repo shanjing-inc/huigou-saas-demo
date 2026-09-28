@@ -20,6 +20,7 @@
                 <view class="tab {{mode === 'profile' ? 'active' : ''}}" data-mode="profile" bindtap="changeTab">成员</view>
                 <view class="tab {{mode === 'promote' ? 'active' : ''}}" data-mode="promote" bindtap="changeTab">推广</view>
                 <view class="tab {{mode === 'orders' ? 'active' : ''}}" data-mode="orders" bindtap="changeTab">订单</view>
+                <view class="tab {{mode === 'wallet' ? 'active' : ''}}" data-mode="wallet" bindtap="changeTab">钱包</view>
                 <view class="tab {{mode === 'bills' ? 'active' : ''}}" data-mode="bills" bindtap="changeTab">账单</view>
                 <view class="tab {{mode === 'withdrawals' ? 'active' : ''}}" data-mode="withdrawals" bindtap="changeTab">提现</view>
             </view>
@@ -34,6 +35,37 @@
             <view class="stat"><text>待结算</text><text>¥ {{profile.pendingMoney}}</text></view>
             <view class="stat"><text>累计提现</text><text>¥ {{profile.withdrawalMoney}}</text></view>
             <button class="quiet" disabled="{{busy}}" bindtap="disconnect">断开会话</button>
+        </view>
+
+        <view wx:elif="{{mode === 'wallet'}}" class="section wallet-section">
+            <view class="section-head">我的钱包 <text class="eyebrow">LIVE TEST</text></view>
+            <view class="wallet-balance">
+                <view class="wallet-balance-label">可用余额 · 元</view>
+                <view class="wallet-balance-main"><text class="wallet-amount">{{walletLoaded ? profile.money : '—'}}</text><button class="wallet-history" data-mode="withdrawals" bindtap="changeTab">提现记录 ›</button></view>
+                <view class="wallet-summary">
+                    <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.pendingMoney : '—'}}</text></view>
+                    <view><text>累计已提现</text><text class="wallet-summary-value">{{walletLoaded ? profile.withdrawalMoney : '—'}}</text></view>
+                </view>
+            </view>
+            <view class="wallet-hint">待结算包含已提交但未到账的提现；当前页面不发起提现。</view>
+            <view class="wallet-stat-header"><text>成员订单收益</text><button class="wallet-refresh" disabled="{{busy}}" bindtap="refreshWallet">刷新</button></view>
+            <view class="wallet-periods">
+                <view class="wallet-period {{walletPeriod === 'day' ? 'selected' : ''}}" data-period="day" bindtap="changeWalletPeriod">按天</view>
+                <view class="wallet-period {{walletPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="changeWalletPeriod">按月</view>
+                <view class="wallet-period {{walletPeriod === 'year' ? 'selected' : ''}}" data-period="year" bindtap="changeWalletPeriod">按年</view>
+            </view>
+            <view class="wallet-hint">{{walletPeriod === 'day' ? '近30个业务日' : '近366个业务日'}} · 仅展示有数据的时段</view>
+            <view wx:if="{{busy && !walletLoaded}}" class="empty">正在读取成员收益…</view>
+            <view wx:elif="{{walletLoaded && !walletStats.length}}" class="empty">该时段暂无收益记录</view>
+            <view wx:for="{{walletStats}}" wx:key="date" class="wallet-stat-row">
+                <view class="wallet-stat-top"><text>{{item.date}} 收益</text><text>{{item.orderCount}} 笔订单</text></view>
+                <view class="wallet-stat-values">
+                    <view><text>新增预估返利</text><text class="wallet-stat-money">¥{{item.estimateMemberOrderCommission}}</text></view>
+                    <view><text>新增已结算返利</text><text class="wallet-stat-money">¥{{item.settledMemberOrderCommission}}</text></view>
+                </view>
+            </view>
+            <button wx:if="{{walletHasMore}}" class="quiet wallet-more" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载更早时段</button>
+            <view class="wallet-hint">上游仅提供成员订单返利汇总，暂无自购、带货、邀请、任务分项。</view>
         </view>
 
         <view wx:elif="{{mode === 'promote'}}" class="section">

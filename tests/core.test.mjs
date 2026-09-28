@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { after, before, test } from "node:test";
-import { createDemo, DemoError, loadConfig, sign } from "../backend/core.mjs";
+import { createDemo, DemoError, loadConfig, sign, statisticRange } from "../backend/core.mjs";
 import { createServer } from "../backend/http.mjs";
 
 const env = {
@@ -13,6 +13,7 @@ const config = loadConfig(env);
 const calls = [];
 let badLogin = false;
 let expired = false;
+let badWallet = false;
 
 function upstream(url, options) {
     calls.push({ url, options });
@@ -25,6 +26,9 @@ function upstream(url, options) {
         payload = { errors: [{ message: "private upstream message", extensions: { code: "UNAUTHENTICATED" } }] };
     } else if (query.includes("query Profile")) {
         payload = { data: { getProfile: { memberId: 99, teamId: 34, role: "member", money: "1.00", pendingMoney: "0", withdrawalMoney: "0" } } };
+    } else if (query.includes("query Wallet")) {
+        payload = badWallet ? { errors: [{ message: "private signing failure", extensions: { code: "FORBIDDEN" } }] }
+            : { data: { listRevenueStatistic: { items: [{ date: "2026-09-28", orderCount: 2, estimateMemberOrderCommission: "4.9400", settledMemberOrderCommission: "0.0000" }], hasMore: false } } };
     } else if (query.includes("query Parse")) {
         payload = { data: { parsePromotionMaterial: [{ platform: "jd", type: "goods", keyContent: "share", detail: { itemUrl: "https://test.example/item", itemId: "8", itemTitle: "Test" } }] } };
     } else if (query.includes("mutation Link")) {
@@ -49,6 +53,47 @@ test("validates isolated configuration and signs sorted GraphQL variables", () =
     assert.throws(() => loadConfig({ ...env, DEMO_APP_SECRET: "replace-with-secret" }), /隔离测试/);
     const vars = { teamId: 34, openid: "test-only-openid", organizationId: 12 };
     assert.equal(sign(vars, config.secret), createHash("md5").update("openid=test-only-openid&organizationId=12&teamId=34test-secret").digest("hex"));
+});
+
+test("wallet range uses Shanghai business day and caps yearly views at 366 days", () => {
+    assert.deepEqual(statisticRange("day"), {});
+    assert.deepEqual(statisticRange("month", new Date("2026-09-27T16:30:00Z")), { from: "2025-09-28", to: "2026-09-28" });
+});
+
+test("wallet statistics use the authenticated member ID with signed application credentials", async () => {
+    calls.length = 0;
+    const demo = createDemo(config, upstream);
+    const { session } = await demo.login();
+    for (const input of [{ period: "day", memberId: 8 }, { period: "month", organizationId: 1 }, { period: "year", from: "2020-01-01" }, { period: "all" }, { period: "day", page: 0 }]) {
+        await assert.rejects(demo.request("wallet", input, session), (error) => error.code === "INPUT");
+    }
+    assert.equal(calls.length, 2);
+    const wallet = await demo.request("wallet", { period: "month", page: 1 }, session);
+    assert.equal(wallet.profile.money, "1.00");
+    assert.equal(wallet.items[0].estimateMemberOrderCommission, "4.9400");
+    const profileCall = calls.at(-2);
+    const statisticCall = calls.at(-1);
+    assert.match(profileCall.url, /\/api\/graphql\/member$/);
+    assert.equal(profileCall.options.headers.authorization, "Bearer member-jwt-private");
+    assert.match(statisticCall.url, /\/api\/graphql\/application$/);
+    const { query, variables } = JSON.parse(statisticCall.options.body);
+    assert.match(query, /listRevenueStatistic\(memberId: \$memberId/);
+    assert.equal(variables.memberId, 99);
+    assert.equal(variables.period, "month");
+    assert.equal(variables.limit, 20);
+    assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(variables.from));
+    assert.equal(statisticCall.options.headers["x-signature"], sign(variables, config.secret));
+    assert.equal(statisticCall.options.headers.authorization, undefined);
+
+    badWallet = true;
+    await assert.rejects(demo.request("wallet", { period: "day" }, session), (error) => error.code === "UPSTREAM" && !error.message.includes("private"));
+    badWallet = false;
+    expired = true;
+    const before = calls.length;
+    await assert.rejects(demo.request("wallet", { period: "day" }, session), (error) => error.code === "SESSION_EXPIRED");
+    assert.equal(calls.length, before + 1);
+    expired = false;
+    await assert.rejects(demo.request("wallet", { period: "day" }, session), (error) => error.code === "SESSION_EXPIRED");
 });
 
 test("fixed identity, member JWT confinement, candidate, link and empty lists", async () => {
@@ -136,6 +181,18 @@ test("HTTP denies client OpenID, reports invalid credentials, then expires stale
     assert.equal(result.status, 401);
     result = await post("profile", {}, "invalid-session");
     assert.equal(result.body.code, "SESSION_EXPIRED");
+});
+
+test("HTTP wallet refuses scope overrides and returns only member-scoped statistics", async () => {
+    const login = await post("login");
+    assert.equal(login.status, 200);
+    const invalid = await post("wallet", { period: "day", memberId: 1 }, login.body.session);
+    assert.equal(invalid.status, 400);
+    const wallet = await post("wallet", { period: "day" }, login.body.session);
+    assert.equal(wallet.status, 200);
+    assert.equal(wallet.body.data.profile.memberId, 99);
+    assert.equal(wallet.body.data.items.length, 1);
+    assert.equal(JSON.stringify(wallet.body).includes("member-jwt-private"), false);
 });
 
 test("status does not reveal credentials; invalid host and content type are blocked", async () => {

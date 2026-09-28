@@ -29,7 +29,7 @@ export function createServer(env, fetchImpl) {
             respond(res, 200, { demo: true, configured: Boolean(demo), mode: "real-test-only" });
             return;
         }
-        if (req.url !== "/api/login" && req.url !== "/api/logout" && !/^\/api\/(profile|parse|item|link|orders|bills|withdrawals)$/.test(req.url ?? "")) {
+        if (req.url !== "/api/login" && req.url !== "/api/logout" && !/^\/api\/(profile|parse|item|link|orders|bills|withdrawals|wallet)$/.test(req.url ?? "")) {
             respond(res, 404, { code: "NOT_FOUND", message: "接口不存在。" });
             return;
         }
