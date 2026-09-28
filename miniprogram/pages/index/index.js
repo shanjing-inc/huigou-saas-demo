@@ -39,6 +39,7 @@ Page({
         demo: true,
         statusBarHeight: typeof wx.getSystemInfoSync === "function" ? wx.getSystemInfoSync().statusBarHeight : 20,
         configured: false,
+        backendSupportsAccounts: false,
         financialWritesEnabled: false,
         backendReachable: false,
         checkingBackend: false,
@@ -80,22 +81,26 @@ Page({
     },
 
     checkBackend() {
-        if (this.data.checkingBackend || this.data.connected) return;
+        if (this.data.checkingBackend) return;
         this.setData({ checkingBackend: true });
         wx.request({
             url: `${BASE}/api/status`,
             success: ({ statusCode, data }) => {
                 const backendReachable = statusCode === 200 && data?.demo === true;
+                const backendSupportsAccounts = backendReachable && typeof data.financialWritesEnabled === "boolean";
                 this.setData({
                     backendReachable,
                     configured: backendReachable && Boolean(data.configured),
-                    financialWritesEnabled: backendReachable && Boolean(data.financialWritesEnabled),
-                    error: backendReachable ? "" : "本机端口未返回 Demo 后端状态，请检查服务和端口。",
+                    backendSupportsAccounts,
+                    financialWritesEnabled: backendSupportsAccounts && data.financialWritesEnabled,
+                    error: !backendReachable ? "本机端口未返回 Demo 后端状态，请检查服务和端口。"
+                        : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重新连接。" : "",
                 });
             },
             fail: () => this.setData({
                 backendReachable: false,
                 configured: false,
+                backendSupportsAccounts: false,
                 financialWritesEnabled: false,
                 error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
             }),
@@ -115,6 +120,10 @@ Page({
                 data,
                 success: ({ statusCode, data: body }) => {
                     if (statusCode >= 200 && statusCode < 300) return resolve(body);
+                    if (statusCode === 404 && body?.code === "NOT_FOUND" && ["accounts", "createAccount", "updateAccount", "deleteAccount", "withdraw"].includes(action)) {
+                        this.setData({ backendSupportsAccounts: false, financialWritesEnabled: false });
+                        return reject(new Error("运行中的 Demo 后端版本过旧，请重启后端并重新连接。"));
+                    }
                     if (body?.code === "SESSION_EXPIRED") {
                         this.invalidateCandidates();
                         getApp().globalData.session = "";
@@ -189,13 +198,13 @@ Page({
     },
 
     openAccounts() {
-        if (this.data.busy || !this.data.connected) return;
+        if (this.data.busy || !this.data.connected || !this.data.backendSupportsAccounts) return;
         this.setData({ mode: "accounts", accountsReturnMode: this.data.mode === "withdraw" ? "withdraw" : "wallet", error: "", notice: "", accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false });
         this.loadAccounts();
     },
 
     openWithdrawal() {
-        if (this.data.busy || !this.data.connected) return;
+        if (this.data.busy || !this.data.connected || !this.data.backendSupportsAccounts) return;
         this.setData({ mode: "withdraw", error: "", notice: "", accountsLoaded: false, withdrawalAmount: "", withdrawalAccountId: null });
         this.loadAccounts(true);
     },
