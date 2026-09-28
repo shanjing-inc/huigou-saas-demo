@@ -1,7 +1,7 @@
 {
     "pages": ["pages/index/index"],
     "window": {
-        "navigationBarTitleText": "合作方返利 Demo",
+        "navigationBarTitleText": "惠购 Saas 版",
         "navigationBarBackgroundColor": "#f7f9f8",
         "navigationBarTextStyle": "black",
         "backgroundColor": "#f7f9f8"

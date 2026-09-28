@@ -1,10 +1,10 @@
-# 合作方返利小程序联调 Demo
+# 惠购 Saas 版 · 小程序联调 Demo
 
 合作方业务导览见根目录的 [使用说明](使用说明.html)；
 
 本文档集中说明 Demo 的运行、交接与联调。
 
-AI 辅助对接请先阅读 [合作方 GraphQL skill](skills/partner-rebate-api/SKILL.md)；它说明签名、目标环境 Schema 和授权调用边界，不替代对接人的环境授权。
+AI 辅助对接请先阅读 [惠购 Saas 版 skill](skills/huigou-saas-skills/SKILL.md)；它说明签名、目标环境 Schema 和授权调用边界，不替代对接人的环境授权。
 
 ## 代码与数据流
 
