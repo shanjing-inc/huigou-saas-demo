@@ -113,7 +113,6 @@ button::after { border: 0; }
 .money-section { padding: 26rpx 24rpx; background: #fff; min-height: 70vh; }
 .money-actions { display: flex; gap: 14rpx; margin: 8rpx 16rpx 18rpx; }
 .money-action { flex: 1; min-width: 0; padding: 0 6rpx; font-size: 23rpx; }
-.write-warning { margin: 18rpx 24rpx; font-size: 22rpx; color: #914329; line-height: 1.5; }
 .account-row { background: #fff; border-bottom: 1rpx solid #e2e8e4; padding: 22rpx 4rpx; }
 .account-row.selectable { border: 1rpx solid #d7e2dc; border-radius: 6rpx; margin: 12rpx 0; padding: 20rpx 16rpx; }
 .account-row.chosen { border-color: #08755c; background: #eff9f3; }

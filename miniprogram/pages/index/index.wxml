@@ -5,7 +5,7 @@
     </view>
     <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="topline"><text class="mark">HUIGOU / PARTNER</text><text class="demo-tag">隔离测试 · DEMO</text></view>
     <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="page-title">返利联调</view>
-    <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="subtitle">真实测试接口 · 资金写入需本机授权</view>
+    <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="subtitle">真实测试接口 · 仅限隔离测试环境</view>
     <view wx:else class="showcase-label">隔离测试 · DEMO</view>
 
     <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
@@ -51,9 +51,8 @@
                     <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.pendingMoney : '—'}}</text></view>
                 </view>
             </view>
-            <view class="money-actions"><button class="money-action primary" disabled="{{busy || !walletLoaded || !backendSupportsAccounts || !financialWritesEnabled}}" bindtap="openWithdrawal">申请提现</button><button class="money-action quiet" disabled="{{busy || !backendSupportsAccounts}}" bindtap="openAccounts">管理收款账号</button></view>
-            <view wx:if="{{!backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重新连接测试环境。</view>
-            <view wx:elif="{{!financialWritesEnabled}}" class="write-warning">本机尚未开启隔离测试资金写操作；可查看已登记账号，不能修改或提现。</view>
+            <view class="money-actions"><button class="money-action primary" disabled="{{busy || !walletLoaded || !backendSupportsAccounts}}" bindtap="openWithdrawal">申请提现</button><button class="money-action quiet" disabled="{{busy || !backendSupportsAccounts}}" bindtap="openAccounts">管理收款账号</button></view>
+            <view wx:if="{{backendReachable && !backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重新连接测试环境。</view>
             <button wx:if="{{!backendSupportsAccounts}}" class="quiet wallet-more" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重新检测本机后端</button>
             <view class="wallet-periods">
                 <view class="wallet-period {{walletPeriod === 'day' ? 'selected' : ''}}" data-period="day" bindtap="changeWalletPeriod">按天查看</view>
@@ -82,9 +81,9 @@
             <view wx:for="{{accounts}}" wx:for-item="account" wx:key="id" class="account-row">
                 <view class="account-main"><text class="account-kind">{{account.typeLabel}} <text wx:if="{{account.isDefault}}" class="default-tag">默认</text></text><text class="account-number">{{account.account}}</text></view>
                 <view class="account-owner">收款人：{{account.name}}</view>
-                <view wx:if="{{financialWritesEnabled}}" class="account-controls"><button class="account-control" size="mini" disabled="{{busy}}" data-id="{{account.id}}" bindtap="showEditAccount">修改资料</button><button class="account-control danger" size="mini" disabled="{{busy}}" data-id="{{account.id}}" bindtap="deleteAccount">删除</button></view>
+                <view class="account-controls"><button class="account-control" size="mini" disabled="{{busy}}" data-id="{{account.id}}" bindtap="showEditAccount">修改资料</button><button class="account-control danger" size="mini" disabled="{{busy}}" data-id="{{account.id}}" bindtap="deleteAccount">删除</button></view>
             </view>
-            <button wx:if="{{financialWritesEnabled && !accountFormMode}}" class="primary" disabled="{{busy}}" bindtap="showCreateAccount">登记新账号</button>
+            <button wx:if="{{!accountFormMode}}" class="primary" disabled="{{busy}}" bindtap="showCreateAccount">登记新账号</button>
             <view wx:if="{{accountFormMode}}" class="account-form">
                 <view class="subhead">{{accountFormMode === 'create' ? '登记收款账号' : '修改收款人资料'}}</view>
                 <view wx:if="{{accountFormMode === 'create'}}" class="type-row">
@@ -105,7 +104,6 @@
                 <view wx:if="{{accountFormMode === 'edit'}}" class="hint">账号或开户行不可修改；更换时先登记新账号，再删除旧账号。</view>
                 <view class="money-actions"><button class="money-action quiet" disabled="{{busy}}" bindtap="cancelAccountForm">取消</button><button class="money-action primary" disabled="{{busy}}" loading="{{busy}}" bindtap="saveAccount">保存</button></view>
             </view>
-            <view wx:if="{{!financialWritesEnabled}}" class="write-warning">资金写操作未启用，账号只能查看。</view>
         </view>
 
         <view wx:elif="{{mode === 'withdraw'}}" class="money-section">
@@ -119,7 +117,7 @@
                 <view class="account-main"><text>{{account.typeLabel}} <text wx:if="{{account.isDefault}}" class="default-tag">默认</text></text><text>{{account.account}}</text></view>
                 <view class="account-owner">{{account.name}} <text wx:if="{{withdrawalAccountId === account.id}}" class="selected-account">已选中 ✓</text></view>
             </view>
-            <button class="primary" disabled="{{busy || !accountsLoaded || !accounts.length || !financialWritesEnabled || !withdrawalAmount}}" loading="{{busy}}" bindtap="submitWithdrawal">确认提现信息</button>
+            <button class="primary" disabled="{{busy || !accountsLoaded || !accounts.length || !withdrawalAmount}}" loading="{{busy}}" bindtap="submitWithdrawal">确认提现信息</button>
             <view class="wallet-hint">仅限专用隔离测试身份。提交会占用可用余额；如刷新失败，请先核对提现记录，勿重复提交。</view>
         </view>
 

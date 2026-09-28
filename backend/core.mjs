@@ -8,7 +8,6 @@ const validPlatforms = new Set([
 ]);
 const types = new Set(["goods", "activity", "live", "life"]);
 const statisticPeriods = new Set(["day", "month", "year"]);
-const writeActions = new Set(["createAccount", "updateAccount", "deleteAccount", "withdraw"]);
 const accountTypes = new Set([1, 2, 3]);
 const accountId = (id) => Number.isSafeInteger(id) && id > 0;
 
@@ -48,7 +47,6 @@ export function loadConfig(env) {
         openid: env.DEMO_OPENID,
         organizationId,
         teamId,
-        financialWritesEnabled: env.DEMO_ENABLE_FINANCIAL_WRITES === "1",
     };
 }
 
@@ -251,9 +249,6 @@ export function createDemo(config, fetchImpl = fetch) {
         const variables = variablesFor(action, input);
         const authenticated = sessions.get(session);
         if (!authenticated) throw new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
-        if (writeActions.has(action) && !config.financialWritesEnabled) {
-            throw new DemoError("FINANCIAL_WRITES_DISABLED", "本机未启用隔离测试资金写操作。", 403);
-        }
         try {
             if (action === "wallet") {
                 const profile = await call("profile", {}, authenticated.token);
@@ -283,5 +278,5 @@ export function createDemo(config, fetchImpl = fetch) {
         }
     }
 
-    return { login, request, logout: (session) => sessions.delete(session), financialWritesEnabled: config.financialWritesEnabled };
+    return { login, request, logout: (session) => sessions.delete(session) };
 }

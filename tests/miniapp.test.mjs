@@ -43,7 +43,7 @@ test("status check can recover after the backend starts", () => {
     assert.match(page.data.error, /无法访问本机后端/);
 
     page.checkBackend();
-    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, financialWritesEnabled: false } });
+    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[1].complete();
     assert.equal(page.data.backendReachable, true);
     assert.equal(page.data.configured, true);
@@ -66,7 +66,7 @@ test("old backend status blocks account page and recovers after a restart", asyn
     assert.equal(requests.length, 1);
 
     page.checkBackend();
-    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, financialWritesEnabled: false } });
+    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[1].complete();
     assert.equal(page.data.backendSupportsAccounts, true);
     assert.equal(page.data.error, "");
@@ -291,7 +291,6 @@ test("wallet session expiration clears balances and statistics", async () => {
 test("account management lists masked accounts and edits via fixed routes", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options), () => {}, (options) => options.success({ confirm: true }));
-    page.data.financialWritesEnabled = true;
     page.data.backendSupportsAccounts = true;
     page.data.mode = "wallet";
     page.openAccounts();
@@ -334,7 +333,6 @@ test("account identity can be cleared explicitly; canceled deletion makes no req
     const requests = [];
     let modal;
     const page = mountPage((options) => requests.push(options), () => {}, (options) => { modal = options; });
-    page.data.financialWritesEnabled = true;
     page.data.mode = "accounts";
     page.data.accounts = [{ id: 12, type: 1, name: "测***", account: "****3456" }];
     page.showEditAccount({ currentTarget: { dataset: { id: 12 } } });
@@ -350,7 +348,7 @@ test("account identity can be cleared explicitly; canceled deletion makes no req
     assert.equal(requests.length, 2);
 });
 
-test("withdrawal needs opt-in, explicit account selection and user confirmation", async () => {
+test("withdrawal requires account selection and user confirmation without a switch", async () => {
     const requests = [];
     let modal;
     const page = mountPage((options) => requests.push(options), () => {}, (options) => { modal = options; });
@@ -362,9 +360,10 @@ test("withdrawal needs opt-in, explicit account selection and user confirmation"
     requests[1].success({ statusCode: 200, data: { data: { memberId: 99, money: "5.00" } } });
     await flush();
     page.updateWithdrawalAmount({ detail: { value: "1.00" } });
+    page.setData({ withdrawalAccountId: null });
     page.submitWithdrawal();
     assert.equal(modal, undefined);
-    page.data.financialWritesEnabled = true;
+    page.selectWithdrawalAccount({ currentTarget: { dataset: { id: 7 } } });
     page.submitWithdrawal();
     assert.match(modal.content, /\*\*\*\*3456/);
     modal.success({ confirm: false });

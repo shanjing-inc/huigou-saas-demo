@@ -40,7 +40,6 @@ Page({
         statusBarHeight: typeof wx.getSystemInfoSync === "function" ? wx.getSystemInfoSync().statusBarHeight : 20,
         configured: false,
         backendSupportsAccounts: false,
-        financialWritesEnabled: false,
         backendReachable: false,
         checkingBackend: false,
         mode: "profile",
@@ -87,12 +86,11 @@ Page({
             url: `${BASE}/api/status`,
             success: ({ statusCode, data }) => {
                 const backendReachable = statusCode === 200 && data?.demo === true;
-                const backendSupportsAccounts = backendReachable && typeof data.financialWritesEnabled === "boolean";
+                const backendSupportsAccounts = backendReachable && data.supportsAccountManagement === true;
                 this.setData({
                     backendReachable,
                     configured: backendReachable && Boolean(data.configured),
                     backendSupportsAccounts,
-                    financialWritesEnabled: backendSupportsAccounts && data.financialWritesEnabled,
                     error: !backendReachable ? "本机端口未返回 Demo 后端状态，请检查服务和端口。"
                         : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重新连接。" : "",
                 });
@@ -101,7 +99,6 @@ Page({
                 backendReachable: false,
                 configured: false,
                 backendSupportsAccounts: false,
-                financialWritesEnabled: false,
                 error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
             }),
             complete: () => this.setData({ checkingBackend: false }),
@@ -121,7 +118,7 @@ Page({
                 success: ({ statusCode, data: body }) => {
                     if (statusCode >= 200 && statusCode < 300) return resolve(body);
                     if (statusCode === 404 && body?.code === "NOT_FOUND" && ["accounts", "createAccount", "updateAccount", "deleteAccount", "withdraw"].includes(action)) {
-                        this.setData({ backendSupportsAccounts: false, financialWritesEnabled: false });
+                        this.setData({ backendSupportsAccounts: false });
                         return reject(new Error("运行中的 Demo 后端版本过旧，请重启后端并重新连接。"));
                     }
                     if (body?.code === "SESSION_EXPIRED") {
@@ -222,12 +219,12 @@ Page({
     },
 
     showCreateAccount() {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         this.setData({ accountFormMode: "create", editingAccountId: null, accountForm: emptyAccountForm(), clearIdentity: false, error: "" });
     },
 
     showEditAccount(event) {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         const id = Number(event.currentTarget.dataset.id);
         if (!this.data.accounts.some((account) => account.id === id)) return;
         this.setData({ accountFormMode: "edit", editingAccountId: id, accountForm: emptyAccountForm(), clearIdentity: false, error: "" });
@@ -256,7 +253,7 @@ Page({
     },
 
     saveAccount() {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         const { accountForm: form, accountFormMode, editingAccountId, clearIdentity } = this.data;
         if (!accountFormMode) return;
         let input;
@@ -290,7 +287,7 @@ Page({
     },
 
     deleteAccount(event) {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         const id = Number(event.currentTarget.dataset.id);
         if (!this.data.accounts.some((account) => account.id === id)) return;
         wx.showModal({ title: "删除收款账号", content: "仅删除账号登记；已申请的提现记录仍会保留。", success: ({ confirm }) => {
@@ -316,7 +313,7 @@ Page({
     },
 
     submitWithdrawal() {
-        if (!this.data.financialWritesEnabled || this.data.busy || this.confirmingWithdrawal) return;
+        if (this.data.busy || this.confirmingWithdrawal) return;
         const amount = this.data.withdrawalAmount.trim();
         const withdrawalAccountId = this.data.withdrawalAccountId;
         const account = this.data.accounts.find((item) => item.id === withdrawalAccountId);
