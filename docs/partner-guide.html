@@ -639,10 +639,7 @@
                         </ul>
                     </article>
                 </div>
-                <p class="note">
-                    <strong>提现流程请核对交付环境：</strong>审核要求和处理节点请按交付环境的 Schema
-                    与处理方确认；未经确认，不要将免审核、申请即待打款作为可用能力。系统登记打款结果不代替真实转账。
-                </p>
+
             </section>
             <section id="terms" aria-labelledby="terms-title">
                 <span class="eyebrow">05 / 常用名词</span>
@@ -672,28 +669,7 @@
             </section>
             <section id="faq" aria-labelledby="faq-title">
                 <span class="eyebrow">06 / 遇到问题</span>
-                <h2 id="faq-title">先检查这几处</h2>
-                <details>
-                    <summary>签名或登录失败？</summary>
-                    <p>
-                        对照实际发送的 GraphQL variables、App
-                        Key、秒级时间戳与服务端签名约定；确认组织授权和用户 OpenID
-                        来自可信登录结果。
-                    </p>
-                </details>
-                <details>
-                    <summary>转链成功，但订单没出现？</summary>
-                    <p>
-                        先核对推广入口、商城与成员范围，再等待上游回单及业务处理；不要用转链结果代替订单事实。
-                    </p>
-                </details>
-                <details>
-                    <summary>切换 Team 后查到旧数据？</summary>
-                    <p>
-                        重新登录获取新成员 Token；Token 的组织和 Team
-                        范围不会因为前端选择器变化而改变。
-                    </p>
-                </details>
+                
                 <p class="intro">
                     联调问题请提供接口名、请求时间、脱敏变量与错误码；切勿发送 App Secret、完整
                     Token 或收款资料。
