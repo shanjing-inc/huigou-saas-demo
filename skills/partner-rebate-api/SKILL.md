@@ -2,6 +2,8 @@
 name: partner-rebate-api
 description: 对接返利项目合作方 GraphQL API 时使用；帮助 AI 查阅 application/member Schema、确认已开放功能、计算应用签名及在授权的隔离环境调用接口。不是后台管理接口或生产资金操作的自动授权。
 ---
+# Demo 维护和参考
+请读取仓库的 `README.md` 文件。
 
 # 合作方 GraphQL 接入
 
