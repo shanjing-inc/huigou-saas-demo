@@ -91,8 +91,37 @@
             <view wx:elif="{{loaded && !records.length}}" class="empty">测试环境暂无记录。转链成功不会立即产生订单。</view>
             <view wx:for="{{records}}" wx:key="id" class="record">
                 <block wx:if="{{mode === 'orders'}}">
-                    <view class="record-row"><text class="strong">{{item.platform}} · {{item.orderSn}}</text><text>¥ {{item.paidAmount}}</text></view>
-                    <view class="meta">{{item.orderedAt}} · {{item.statusLabel}} · 返利 ¥ {{item.rebateMoney}}</view>
+                    <view class="order-head">
+                        <view class="order-ident"><text class="order-platform">{{item.platformLabel}}</text><text class="order-number">订单号：{{item.orderSn}}</text></view>
+                        <button class="copy-order" size="mini" data-id="{{item.id}}" bindtap="copyOrderSn">复制</button>
+                    </view>
+                    <view wx:if="{{item.goods.length}}" class="order-goods">
+                        <view wx:for="{{item.goods}}" wx:for-item="good" wx:for-index="goodIndex" wx:key="index" class="order-good">
+                            <view class="order-photo">
+                                <image wx:if="{{good.imageUrl && !good.imageFailed}}" src="{{good.imageUrl}}" mode="aspectFill" lazy-load="true" data-id="{{item.id}}" data-index="{{goodIndex}}" data-image="{{good.imageUrl}}" binderror="orderImageError" />
+                                <view wx:else class="photo-fallback">暂无图片</view>
+                            </view>
+                            <view class="order-good-info">
+                                <view class="order-title">{{good.itemTitle || '商品名称暂缺'}}</view>
+                                <view wx:if="{{good.itemPrice || good.itemNum}}" class="order-good-meta"><text wx:if="{{good.itemPrice}}">单价 ¥{{good.itemPrice}}</text><text wx:if="{{good.itemNum}}">数量 ×{{good.itemNum}}</text></view>
+                            </view>
+                        </view>
+                    </view>
+                    <view wx:else class="order-missing">商品明细暂未提供</view>
+                    <view class="order-amounts">
+                        <view><text class="order-amount-label">{{item.detail.payPrice ? '实付金额' : '计佣金额'}}</text><text class="order-price">¥ {{item.detail.payPrice || item.paidAmount}}</text></view>
+                        <view wx:if="{{item.hasRebate}}"><text class="order-amount-label">{{item.settleLabel}}</text><text class="order-rebate">¥ {{item.rebateMoney}}</text></view>
+                        <view wx:else class="order-settle-note">{{item.settleLabel}}</view>
+                    </view>
+                    <view wx:if="{{item.detail.payPrice}}" class="order-meta">计佣金额 ¥{{item.paidAmount}}</view>
+                    <view wx:if="{{item.hasRefund}}" class="order-meta">累计退款 ¥{{item.refundMoney}}</view>
+                    <view wx:if="{{item.detail.invalidReason}}" class="order-meta">失效原因：{{item.detail.invalidReason}}</view>
+                    <view class="order-times">下单 {{item.orderedAt}}<text class="order-status">{{item.statusLabel}}</text></view>
+                    <view wx:if="{{item.paidAt}}" class="order-meta">付款 {{item.paidAt}}</view>
+                    <view wx:if="{{item.confirmedAt}}" class="order-meta">收货 {{item.confirmedAt}}</view>
+                    <view wx:if="{{item.closedAt}}" class="order-meta">关闭 {{item.closedAt}}</view>
+                    <view wx:if="{{item.settleStatus === 1 && item.expectedSettleAt}}" class="order-meta">预计结算 {{item.expectedSettleAt}}</view>
+                    <view wx:if="{{item.settleStatus === 3 && item.settledAt}}" class="order-meta">返利结清 {{item.settledAt}}</view>
                 </block>
                 <block wx:elif="{{mode === 'bills'}}">
                     <view class="record-row"><text class="strong">账单 #{{item.id}}</text><text>¥ {{item.amount}}</text></view>

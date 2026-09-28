@@ -4,6 +4,21 @@ const withdrawalLabels = {
     1: "系统审核中", 2: "已驳回", 3: "待打款", 4: "打款中",
     5: "打款成功", 6: "打款失败", 7: "人工审核中",
 };
+const orderLabels = { "-2": "系统关闭", "-1": "已关闭", 1: "已下单", 2: "已付款", 3: "已发货", 4: "已收货" };
+const platformLabels = { alibaba: "1688", jd: "京东", taobao: "淘宝", vip: "唯品会", pdd: "拼多多", douyin: "抖音" };
+
+function orderRecord(item) {
+    const goods = Array.isArray(item.detail?.goods) ? item.detail.goods.filter(Boolean).map((good) => ({ ...good, imageFailed: false })) : [];
+    return {
+        ...item,
+        goods,
+        platformLabel: platformLabels[item.platform] || item.platform || "未知平台",
+        statusLabel: orderLabels[item.status] || "状态待确认",
+        settleLabel: item.settleStatus === 1 ? "预计返" : item.settleStatus === 3 ? "已结清返利" : item.settleStatus === -1 ? "返利无效" : "返利信息暂无",
+        hasRebate: item.settleStatus === 1 || item.settleStatus === 3,
+        hasRefund: Number(item.refundMoney) > 0,
+    };
+}
 
 Page({
     data: {
@@ -255,6 +270,21 @@ Page({
         if (this.data.link?.url) wx.setClipboardData({ data: this.data.link.url });
     },
 
+    copyOrderSn(event) {
+        const order = this.data.records.find((item) => String(item.id) === String(event.currentTarget.dataset.id));
+        if (this.data.mode === "orders" && order?.orderSn) wx.setClipboardData({ data: order.orderSn });
+    },
+
+    orderImageError(event) {
+        const { id, index, image } = event.currentTarget.dataset;
+        const records = this.data.records.slice();
+        const recordIndex = records.findIndex((item) => String(item.id) === String(id));
+        if (this.data.mode !== "orders" || recordIndex < 0 || records[recordIndex].goods[index]?.imageUrl !== image) return;
+        records[recordIndex] = { ...records[recordIndex], goods: records[recordIndex].goods.slice() };
+        records[recordIndex].goods[index] = { ...records[recordIndex].goods[index], imageFailed: true };
+        this.setData({ records });
+    },
+
     loadMore() {
         if (this.data.hasMore) this.loadRecords(this.data.page + 1);
     },
@@ -263,7 +293,7 @@ Page({
         this.run(async () => {
             const mode = this.data.mode;
             const result = (await this.api(mode, { page })).data;
-            const records = result.items.map((item) => ({
+            const records = result.items.map((item) => mode === "orders" ? orderRecord(item) : ({
                 ...item,
                 statusLabel: mode === "withdrawals" ? withdrawalLabels[item.status] || `状态 ${item.status}` : `状态 ${item.status ?? "未知"}`,
             }));
