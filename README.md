@@ -7,11 +7,11 @@
 
 ## 启动 Demo
 
-准备 Node.js ≥ 20.11、pnpm 和微信开发者工具。向对接人取得专用测试环境地址、App Key/Secret、组织 ID、Team ID 和测试 OpenID。
+准备 Node.js ≥ 20.11、pnpm 和微信开发者工具。Demo 使用正式服务域名和应用凭证；向对接人取得 App Key/Secret、组织 ID、Team ID 和获授权的成员 OpenID。
 
 ### 1. 填写配置
 
-复制 `.env.example` 为 `.env`，填写对接人提供的测试值。服务地址填 HTTPS 站点根地址，不带接口路径。`.env` 只留在本机，不提交或发到聊天中。
+首次使用时复制 `.env.example` 为 `.env`，填写对接人提供的配置；已有 `.env` 则继续使用。服务地址填 HTTPS 站点根地址，不带接口路径。`.env` 只留在本机，不提交或发到聊天中。
 
 ### 2. 启动本机后端
 
@@ -25,13 +25,13 @@ pnpm backend
 
 ### 3. 打开小程序
 
-在微信开发者工具中导入仓库根目录，换成自己的测试 AppID。在本地设置中关闭合法域名校验（`project.private.config.json` 的 `setting.urlCheck: false`），让模拟器能访问本机后端；不要上传这份配置。
+在微信开发者工具中导入仓库根目录，使用自己可用的 AppID。在本地设置中关闭合法域名校验（`project.private.config.json` 的 `setting.urlCheck: false`），让模拟器能访问本机后端；不要上传这份配置。
 
-点击「连接测试环境」，再粘贴[测试商品链接](skills/huigou-saas-skills/references/test-materials.md)，选择候选并生成推广链接。订单和钱包页可查看真实测试数据，没有记录时显示空列表。
+点击「连接服务」，再粘贴[商品样例链接](skills/huigou-saas-skills/references/test-materials.md)，选择候选并生成推广链接。订单和钱包页展示当前成员的实际数据，没有记录时显示空列表。
 
 ## 使用时注意
 
-- 只连接获授权的专用隔离测试环境。登录后，管理收款账号和申请提现即可使用，会改动测试数据和余额。
+- 登录后，管理收款账号和申请提现即可使用，会改动当前成员的实际资料和余额；提交前核对成员、账号和金额。
 - 本机后端仅监听 `127.0.0.1`，不支持真机、公网或共享部署。固定 OpenID 只用于 Demo；正式接入应认证实际用户。密钥和成员 Token 保留在后端。
 - 改配置或更新后端后，在原终端按 `Ctrl+C` 停止，再启动并重新连接。退出 Demo 时也用 `Ctrl+C`。
 
@@ -40,15 +40,14 @@ pnpm backend
 | 现象 | 怎么处理 |
 | --- | --- |
 | 提示后端未启动 | 确认终端仍在运行，点击「重新检测本机后端」。改过 `DEMO_PORT` 时，同步修改 `miniprogram/pages/index/index.js` 的 `BASE`。 |
-| 登录失败 / `SESSION_EXPIRED` | 核对测试配置，重新连接；后端重启会清除会话。 |
 | 更新后仍是旧行为 | 停止占用 8787 端口的旧后端，再启动。状态响应应有 `supportsAccountManagement: true`。 |
-| 商品详情或接口报错 | 核对目标环境的接口文档及商品是否可用，向对接人提供接口名和脱敏错误码。不要用假数据替代。 |
-| 提现超时或结果不明 | 先查提现记录，不要重复提交。 |
+
+登录、商品或资金接口报错时，按[接口错误处理](skills/huigou-saas-skills/references/errors.md)排查。
 
 ## 开发与文档维护
 
-`pnpm test` 运行离线模拟测试；真实联调还需在测试环境验证登录、转链、列表和资金操作，记录结果。离线通过不代表接口已联通。
+`pnpm test` 运行离线模拟测试，不请求正式服务。真实联调按已授权范围验证并记录结果；离线通过不代表接口已联通。
 
-文档分工：本 README 只维护 Demo 启动和排障；[guide.md](skills/huigou-saas-skills/references/guide.md) 维护接入说明；[SKILL.md](skills/huigou-saas-skills/SKILL.md) 只给 AI 阅读入口和执行要求，签名细节放在它的引用文件中。
+文档分工：本 README 维护 Demo 启动和排障；[guide.md](skills/huigou-saas-skills/references/guide.md) 维护接入说明；[capabilities.md](skills/huigou-saas-skills/references/capabilities.md) 维护功能与接口导航；[SKILL.md](skills/huigou-saas-skills/SKILL.md) 给 AI 阅读入口和执行要求。签名与接口错误各自只在引用文件中维护。
 
-修改 `guide.md` 后运行 `pnpm install && pnpm docs:build`，提交生成的 `使用说明.html`，不要手改 HTML。`pnpm docs:check`（CI 同样执行）检查两者是否一致。HTML 可单独离线打开；访问其中的仓库链接需要 GitHub 权限。
+修改 `guide.md` 或 `capabilities.md` 后运行 `pnpm install && pnpm docs:build`，提交生成的 `使用说明.html`，不要手改 HTML。`pnpm docs:check`（CI 同样执行）检查是否一致。HTML 可单独离线打开；访问其中的仓库链接需要 GitHub 权限。

@@ -14,7 +14,7 @@
 
 ## 登录并读取资料
 
-将下例保存为本机临时 `.mjs` 文件，使用 Node.js ≥ 20.11 执行 `node --env-file=.env <脚本.mjs>`。配置项见 Demo 的 `.env.example`；仅对已授权测试环境执行，不打印凭证或完整响应。
+将下例保存为本机临时 `.mjs` 文件，使用 Node.js ≥ 20.11 执行 `node --env-file=.env <脚本.mjs>`。配置项见 Demo 的 `.env.example`；使用已配置的正式服务及授权身份，不打印凭证或完整响应。
 
 ```js
 import { createHash } from "node:crypto";
@@ -32,7 +32,7 @@ const variables = {
     teamId: Number(process.env.DEMO_TEAM_ID),
 };
 if (!variables.openid || !Number.isSafeInteger(variables.organizationId) || !Number.isSafeInteger(variables.teamId) || variables.organizationId <= 0 || variables.teamId <= 0 || !process.env.DEMO_APP_KEY || !process.env.DEMO_APP_SECRET) {
-    throw new Error("Authorized isolated test configuration is required");
+    throw new Error("Authorized member and application configuration is required");
 }
 const canonical = Object.keys(variables).sort().map((key) => `${key}=${variables[key]}`).join("&");
 const signature = createHash("md5").update(canonical + process.env.DEMO_APP_SECRET, "utf8").digest("hex");

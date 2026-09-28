@@ -57,7 +57,7 @@ test("old backend status blocks account page and recovers after a restart", asyn
     const page = mountPage((options) => requests.push(options));
     page.data.connected = false;
     page.checkBackend();
-    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, mode: "real-test-only" } });
+    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, mode: "live" } });
     requests[0].complete();
     assert.equal(page.data.backendSupportsAccounts, false);
     assert.match(page.data.error, /旧版 Demo 后端/);
