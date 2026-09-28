@@ -51,8 +51,10 @@
                     <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.pendingMoney : '—'}}</text></view>
                 </view>
             </view>
-            <view class="money-actions"><button class="money-action primary" disabled="{{busy || !walletLoaded || !financialWritesEnabled}}" bindtap="openWithdrawal">申请提现</button><button class="money-action quiet" disabled="{{busy}}" bindtap="openAccounts">管理收款账号</button></view>
-            <view wx:if="{{!financialWritesEnabled}}" class="write-warning">本机尚未开启隔离测试资金写操作；可查看已登记账号，不能修改或提现。</view>
+            <view class="money-actions"><button class="money-action primary" disabled="{{busy || !walletLoaded || !backendSupportsAccounts || !financialWritesEnabled}}" bindtap="openWithdrawal">申请提现</button><button class="money-action quiet" disabled="{{busy || !backendSupportsAccounts}}" bindtap="openAccounts">管理收款账号</button></view>
+            <view wx:if="{{!backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重新连接测试环境。</view>
+            <view wx:elif="{{!financialWritesEnabled}}" class="write-warning">本机尚未开启隔离测试资金写操作；可查看已登记账号，不能修改或提现。</view>
+            <button wx:if="{{!backendSupportsAccounts}}" class="quiet wallet-more" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重新检测本机后端</button>
             <view class="wallet-periods">
                 <view class="wallet-period {{walletPeriod === 'day' ? 'selected' : ''}}" data-period="day" bindtap="changeWalletPeriod">按天查看</view>
                 <view class="wallet-period {{walletPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="changeWalletPeriod">按月查看</view>
