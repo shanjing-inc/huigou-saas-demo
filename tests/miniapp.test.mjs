@@ -22,6 +22,14 @@ const candidate = (itemId, itemUrl = `https://example.test/${itemId}`) => ({
     platform: "jd", type: "goods", keyContent: "same share text", detail: { itemId, itemUrl, itemTitle: `商品 ${itemId}` },
 });
 
+test("order and wallet views display only supported source metrics", () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.doesNotMatch(markup, /分享订单|自购预估|带货预估|邀请预估|任务预估|待申请补贴/);
+    assert.match(markup, /stat\.orderCount/);
+    assert.match(markup, /stat\.estimateMemberOrderCommission/);
+    assert.match(markup, /stat\.settledMemberOrderCommission/);
+});
+
 test("status check can recover after the backend starts", () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
@@ -192,8 +200,6 @@ test("orders display only returned details and distinguish pending from settled 
     page.toggleOrderDetail({ currentTarget: { dataset: { id: 1 } } });
     assert.equal(page.data.records[0].expanded, true);
     assert.equal(page.data.records[1].expanded, false);
-    page.orderSourceNotice();
-    assert.match(page.data.notice, /不能按来源筛选/);
     page.backToProfile();
     assert.equal(page.data.mode, "profile");
 });
@@ -210,8 +216,6 @@ test("wallet switches periods, paginates only real buckets, and opens withdrawal
     assert.equal(page.data.profile.money, "5.00");
     assert.equal(page.data.walletStats.length, 1);
     assert.equal(page.data.walletStats[0].estimateMemberOrderCommission, "2.5000");
-    assert.equal(page.data.walletMissingCategories.length, 8);
-    assert.equal(page.data.walletMissingCategories[0], "自购预估");
     page.loadMore();
     assert.equal(requests[1].data.page, 2);
     requests[1].success({ statusCode: 200, data: { data: { profile: page.data.profile, items: [{ date: "2026-09-27", orderCount: 2, estimateMemberOrderCommission: "1.0000", settledMemberOrderCommission: "1.0000" }], hasMore: false } } });
