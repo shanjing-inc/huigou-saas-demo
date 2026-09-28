@@ -6,9 +6,9 @@
         <meta name="color-scheme" content="light" />
         <meta
             name="description"
-            content="合作方接入返利服务：用一页看清双方职责、接入路线和核对要点。"
+            content="惠购 Saas 版合作方接入：用一页看清双方职责、接入路线和核对要点。"
         />
-        <title>合作方接入指南 · 返利服务</title>
+        <title>惠购 Saas 版 · 合作方接入指南</title>
         <style>
             :root {
                 --ink: #12312c;
@@ -448,7 +448,7 @@
         <a class="skip" href="#content">跳到正文</a>
         <header class="top">
             <div class="wrap">
-                <div class="brand">合作方接入 · 返利服务</div>
+                <div class="brand">惠购 Saas 版 · 合作方接入</div>
                 <nav aria-label="页面目录">
                     <a href="#journey">业务路线</a><a href="#start">三步接入</a
                     ><a href="#ai">AI 接入</a><a href="#roles">双方职责</a><a href="#terms">名词</a
@@ -578,7 +578,7 @@
                 <span class="eyebrow">03 / AI 辅助接入</span>
                 <h2 id="ai-title">让 AI 读懂接口，再开始联调</h2>
                 <p class="intro">
-                    Demo 仓库的 <code>skills/partner-rebate-api/SKILL.md</code>
+                    Demo 仓库的 <code>skills/huigou-saas-skills/SKILL.md</code>
                     是 AI 对接入口：说明应用签名、成员 Token、GraphQL 文档查询及功能边界。先取得
                     <a href="https://github.com/shanjing-inc/huigou-saas-demo">Demo 仓库</a>
                     的访问权限，再让 AI 读取它。
@@ -588,9 +588,9 @@
                     <div>
                         <h3>让 AI 加载 skill</h3>
                         <p>
-                            将 Demo 仓库的 <code>skills/partner-rebate-api/</code> 目录放入 AI
+                            将 Demo 仓库的 <code>skills/huigou-saas-skills/</code> 目录放入 AI
                             工具的技能目录（如 Codex 的
-                            <code>$CODEX_HOME/skills/partner-rebate-api/</code
+                            <code>$CODEX_HOME/skills/huigou-saas-skills/</code
                             >），或直接让有仓库访问权限的 AI 读取该目录下的
                             <code>SKILL.md</code>。只发送仓库链接不会自动安装 skill。
                         </p>
@@ -608,7 +608,7 @@
                 </div>
                 <blockquote class="ai-prompt">
                     请先读取 huigou-saas-demo 仓库中的
-                    <code>skills/partner-rebate-api/SKILL.md</code>
+                    <code>skills/huigou-saas-skills/SKILL.md</code>
                     及其按需引用的文档，查看我方提供的测试环境 application/member GraphQL
                     Schema，告诉我目标功能的字段、鉴权和调用顺序；先只进行只读分析，未经我确认不要调用写入或资金接口。
                 </blockquote>
@@ -678,7 +678,7 @@
         </main>
         <footer class="foot">
             <div class="wrap">
-                返利服务 · 合作方接入说明（未正式对外交接）<br />本页是只读的业务引导，不是可运行
+                惠购 Saas 版 · 合作方接入说明（未正式对外交接）<br />本页是只读的业务引导，不是可运行
                 Demo；接口与提现流程以目标环境和双方确认的交付版本为准。
             </div>
         </footer>

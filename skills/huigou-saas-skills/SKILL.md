@@ -1,8 +1,8 @@
 ---
-name: partner-rebate-api
-description: 对接返利项目合作方 GraphQL API，或解释商品推广、订单、钱包与提现流程时使用；帮助 AI 核对业务边界、目标环境 Schema、应用签名及调用权限，不自动授权资金写入。
+name: huigou-saas-skills
+description: 对接惠购 Saas 版合作方 GraphQL API，或解释商品推广、订单、钱包与提现流程时使用；帮助 AI 核对业务边界、目标环境 Schema、应用签名及调用权限，不自动授权资金写入。
 ---
-# 合作方 GraphQL 接入
+# 惠购 Saas 版 · 合作方 GraphQL 接入
 
 业务概览见 Demo 仓库根目录的[使用说明](https://github.com/shanjing-inc/huigou-saas-demo/blob/master/%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.html)；Demo 的启动、安全边界和当前操作范围见同仓 `README.md`。本 skill 可独立阅读，但不代替目标环境 Schema，也不表示已正式对外交接。
 
@@ -33,9 +33,9 @@ description: 对接返利项目合作方 GraphQL API，或解释商品推广、�
 
 ## 身份与调用
 
-- 应用请求：`POST /api/graphql/application`，JSON `{ "query": "...", "variables": { ... } }`，头为 `content-type: application/json`、`x-app-key`、`x-timestamp`（UTC Unix 秒）及 `x-signature`（32 位小写 MD5）。**只签最终发送的 GraphQL variables 集合**，包含业务范围 ID，不签 query、时间戳或请求路径；Secret 直接追加在规范化变量串后，不发送到服务端。标量签名与隔离 Demo 的 `backend/core.mjs` 一致；对象/数组签名请以 SaaS 的 `src/rebate/application-signature.ts` 为准，不可套用 Demo 仅适用于标量的 `sign` 实现。具体过程和请求示例见 [请求示例](references/requests.md)。签名无 nonce，时间戳有效窗口为 ±300 秒；每次请求用当前秒数。
+- 应用请求：`POST /api/graphql/application`，JSON `{ "query": "...", "variables": { ... } }`，头为 `content-type: application/json`、`x-app-key`、`x-timestamp`（UTC Unix 秒）及 `x-signature`（32 位小写 MD5）。**只签最终发送的 GraphQL variables 集合**，包含业务范围 ID，不签 query、时间戳或请求路径；Secret 直接追加在规范化变量串后，不发送到服务端。标量签名与隔离 Demo 的 `backend/core.mjs` 一致；对象/数组签名请以惠购 Saas 版的 `src/rebate/application-signature.ts` 为准，不可套用 Demo 仅适用于标量的 `sign` 实现。具体过程和请求示例见 [请求示例](references/requests.md)。签名无 nonce，时间戳有效窗口为 ±300 秒；每次请求用当前秒数。
 - 用应用签名调用 `login(openid, organizationId, teamId)`，其中 OpenID 必须来自**已认证用户的可信登录服务**；Demo 中固定 OpenID 只属于隔离联调。确认登录返回成员 ID 与 Token 后，成员请求用 `POST /api/graphql/member` + `Authorization: Bearer <JWT>`；`getProfile` 可核对该 Token 对应的成员及钱包范围。换组织/Team 时重新登录，不凭前端传参切换成员身份。
 - 应用端可查询已授权的 Team、商城和收益统计；成员端可读取资料、解析物料、查询商品、转链、读取本人订单/账单/提现及收款账号。提现申请、账号变更、提现流转、Team 修改等是**有真实业务副作用的 Mutation**，不得仅因 Schema 存在就自动执行；需要用户明确的操作授权、合法范围和环境确认。Demo 的本机后端只允许 `backend/queries.mjs` 列出的操作；登录隔离测试身份后收款账号增删改和提现申请默认可用、无额外开关，但这不等于 AI 获得操作授权。结果不明时先查提现记录，不要直接重试。钱包统计由后端绑定已登录成员 ID，客户端不能任意指定身份。
 - 先用授权隔离环境做 `login → getProfile` 的最小验证，再按具体任务挑选操作和所需选择集。任何生产写入或资金相关操作都须另行取得明确授权；联调失败时只记录脱敏变量、操作名、HTTP 状态和 GraphQL 错误码，勿泄露 JWT、Secret 或收款资料。
 
-本 skill 提供接入指引，不会自动导入 SaaS 源码或授予目标环境访问权限。若无法访问目标 Schema、拿不到授权测试身份或字段版本不一致，停在文档/离线检查并联系对接人，不能声称已真实联通。
+本 skill 提供接入指引，不会自动导入惠购 Saas 版源码或授予目标环境访问权限。若无法访问目标 Schema、拿不到授权测试身份或字段版本不一致，停在文档/离线检查并联系对接人，不能声称已真实联通。
