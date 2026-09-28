@@ -171,7 +171,13 @@ test("orders display only returned details and distinguish pending from settled 
     assert.equal(page.data.records[0].statusLabel, "已付款");
     assert.equal(page.data.records[0].settleLabel, "预计返");
     assert.equal(page.data.records[0].goods[0].itemTitle, "商品一");
+    assert.equal(page.data.records[0].displayPrice, "100.00");
+    assert.equal(page.data.records[0].orderDate, "2026-09-01");
+    assert.equal(page.data.records[0].rebateDate, "2026-10-26");
+    assert.equal(page.data.records[0].platformMark, "京");
     assert.equal(page.data.records[1].goods.length, 0);
+    assert.equal(page.data.records[1].displayPrice, "0.00");
+    assert.equal(page.data.records[1].rebateDate, "");
     assert.equal(page.data.records[1].hasRebate, false);
     assert.equal(page.data.records[1].statusLabel, "已关闭");
     assert.equal(page.data.records[2].settleLabel, "已结清返利");
@@ -183,6 +189,13 @@ test("orders display only returned details and distinguish pending from settled 
     assert.equal(page.data.records[0].goods[0].imageFailed, true);
     page.copyOrderSn({ currentTarget: { dataset: { id: 99 } } });
     assert.equal(copied.length, 1);
+    page.toggleOrderDetail({ currentTarget: { dataset: { id: 1 } } });
+    assert.equal(page.data.records[0].expanded, true);
+    assert.equal(page.data.records[1].expanded, false);
+    page.orderSourceNotice();
+    assert.match(page.data.notice, /不能按来源筛选/);
+    page.backToProfile();
+    assert.equal(page.data.mode, "profile");
 });
 
 test("wallet switches periods, paginates only real buckets, and opens withdrawal history", async () => {
@@ -197,6 +210,8 @@ test("wallet switches periods, paginates only real buckets, and opens withdrawal
     assert.equal(page.data.profile.money, "5.00");
     assert.equal(page.data.walletStats.length, 1);
     assert.equal(page.data.walletStats[0].estimateMemberOrderCommission, "2.5000");
+    assert.equal(page.data.walletMissingCategories.length, 8);
+    assert.equal(page.data.walletMissingCategories[0], "自购预估");
     page.loadMore();
     assert.equal(requests[1].data.page, 2);
     requests[1].success({ statusCode: 200, data: { data: { profile: page.data.profile, items: [{ date: "2026-09-27", orderCount: 2, estimateMemberOrderCommission: "1.0000", settledMemberOrderCommission: "1.0000" }], hasMore: false } } });

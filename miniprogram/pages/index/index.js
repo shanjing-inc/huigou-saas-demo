@@ -7,6 +7,12 @@ const withdrawalLabels = {
 };
 const orderLabels = { "-2": "系统关闭", "-1": "已关闭", 1: "已下单", 2: "已付款", 3: "已发货", 4: "已收货" };
 const platformLabels = { alibaba: "1688", jd: "京东", taobao: "淘宝", vip: "唯品会", pdd: "拼多多", douyin: "抖音" };
+const platformMarks = { alibaba: "阿", jd: "京", taobao: "淘", vip: "唯", pdd: "拼", douyin: "抖" };
+const walletMissingCategories = ["自购预估", "带货预估", "邀请预估", "任务预估", "自购结算", "带货结算", "邀请结算", "任务结算"];
+
+function datePart(value) {
+    return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "";
+}
 
 function orderRecord(item) {
     const goods = Array.isArray(item.detail?.goods) ? item.detail.goods.filter(Boolean).map((good) => ({ ...good, imageFailed: false })) : [];
@@ -14,16 +20,23 @@ function orderRecord(item) {
         ...item,
         goods,
         platformLabel: platformLabels[item.platform] || item.platform || "未知平台",
+        platformMark: platformMarks[item.platform] || "单",
         statusLabel: orderLabels[item.status] || "状态待确认",
         settleLabel: item.settleStatus === 1 ? "预计返" : item.settleStatus === 3 ? "已结清返利" : item.settleStatus === -1 ? "返利无效" : "返利信息暂无",
         hasRebate: item.settleStatus === 1 || item.settleStatus === 3,
         hasRefund: Number(item.refundMoney) > 0,
+        displayPrice: item.detail?.payPrice ?? item.paidAmount ?? null,
+        orderDate: datePart(item.orderedAt),
+        confirmDate: datePart(item.confirmedAt),
+        rebateDate: datePart(item.settleStatus === 3 ? item.settledAt : item.settleStatus === 1 ? item.expectedSettleAt : null),
+        expanded: false,
     };
 }
 
 Page({
     data: {
         demo: true,
+        statusBarHeight: typeof wx.getSystemInfoSync === "function" ? wx.getSystemInfoSync().statusBarHeight : 20,
         configured: false,
         backendReachable: false,
         checkingBackend: false,
@@ -38,6 +51,7 @@ Page({
         walletPage: 1,
         walletHasMore: false,
         walletLoaded: false,
+        walletMissingCategories,
         content: "",
         candidates: [],
         selected: null,
@@ -150,6 +164,21 @@ Page({
             this.setData({ walletStats: [], walletPage: 1, walletHasMore: false, walletLoaded: false });
             this.loadWallet(1);
         }
+    },
+
+    backToProfile() {
+        if (this.data.busy) return;
+        this.setData({ mode: "profile", error: "", notice: "" });
+    },
+
+    orderSourceNotice() {
+        this.setData({ notice: "上游订单接口未提供自购与分享分类；当前展示全部订单，不能按来源筛选。" });
+    },
+
+    toggleOrderDetail(event) {
+        const id = event.currentTarget.dataset.id;
+        if (this.data.mode !== "orders") return;
+        this.setData({ records: this.data.records.map((item) => String(item.id) === String(id) ? { ...item, expanded: !item.expanded } : item) });
     },
 
     changeWalletPeriod(event) {
