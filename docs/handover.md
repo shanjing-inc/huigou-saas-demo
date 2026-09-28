@@ -2,7 +2,7 @@
 
 本文档随 Demo 仓库维护，记录接手时需要的代码边界、验证方式和安全约束。启动命令、环境变量示例以根目录 [README](../README.md) 和 `.env.example` 为准；合作方业务定义以生产仓库 `saas/docs/partner-guide.html` 为准。实时进度、审批和阻塞事项以 FEATURE-682 议题及其 MR 为准，不在这里复制状态。
 
-本次交付入口：[MR #1](https://codeup.aliyun.com/shanjing/huigou/huigou-partner-miniapp-demo/change/1)（`feature/682-partner-miniapp-demo` → `master`）；是否已合入以 MR 页面为准。
+源码仓库：[saas-demo](https://codeup.aliyun.com/shanjing/huigou/saas-demo)（`master`）；SSH 克隆地址：`git@codeup.aliyun.com:shanjing/huigou/saas-demo.git`。历史交付记录：[MR #1](https://codeup.aliyun.com/shanjing/huigou/saas-demo/change/1)（已合入 `master`）。
 
 ## 代码与数据流
 
