@@ -8,6 +8,9 @@ const validPlatforms = new Set([
 ]);
 const types = new Set(["goods", "activity", "live", "life"]);
 const statisticPeriods = new Set(["day", "month", "year"]);
+const writeActions = new Set(["createAccount", "updateAccount", "deleteAccount", "withdraw"]);
+const accountTypes = new Set([1, 2, 3]);
+const accountId = (id) => Number.isSafeInteger(id) && id > 0;
 
 export class DemoError extends Error {
     constructor(code, message, status = 400) {
@@ -45,6 +48,7 @@ export function loadConfig(env) {
         openid: env.DEMO_OPENID,
         organizationId,
         teamId,
+        financialWritesEnabled: env.DEMO_ENABLE_FINANCIAL_WRITES === "1",
     };
 }
 
@@ -70,6 +74,52 @@ function fields(input, allowed) {
 }
 
 function variablesFor(action, input) {
+    if (action === "accounts") {
+        fields(input, []);
+        return {};
+    }
+    if (action === "createAccount") {
+        fields(input, ["type", "name", "account", "identificationCode", "bankName"]);
+        const { type, name, account, identificationCode, bankName } = input;
+        if (!accountTypes.has(type) || typeof name !== "string" || !name.trim() || name.trim().length > 60 ||
+            typeof account !== "string" || !account.trim() || account.trim().length > 255 ||
+            (identificationCode !== undefined && (typeof identificationCode !== "string" || identificationCode.trim().length > 30)) ||
+            (bankName !== undefined && (type !== 3 || typeof bankName !== "string" || !bankName.trim() || bankName.trim().length > 255))) {
+            throw new DemoError("INPUT", "收款账号信息无效。");
+        }
+        const value = account.trim();
+        if (type === 1 && !/^1[3-9]\d{9}$|^[a-z0-9+_-]+(?:\.[a-z0-9+_-]+)*@(?:[a-z0-9-]+\.)+[a-z]{2,6}$|^\d+-\d+$/i.test(value) ||
+            type === 3 && !/^\d{16,19}$/.test(value.replace(/[\s-]/g, ""))) {
+            throw new DemoError("INPUT", "请检查收款账号格式。");
+        }
+        return { type, name: name.trim(), account: value,
+            ...(identificationCode !== undefined ? { identificationCode: identificationCode.trim() } : {}),
+            ...(bankName ? { ext: JSON.stringify({ bankName: bankName.trim() }) } : {}) };
+    }
+    if (action === "updateAccount") {
+        fields(input, ["id", "name", "identificationCode"]);
+        if (!accountId(input.id) ||
+            (input.name === undefined && input.identificationCode === undefined) ||
+            (input.name !== undefined && (typeof input.name !== "string" || !input.name.trim() || input.name.trim().length > 60)) ||
+            (input.identificationCode !== undefined && (typeof input.identificationCode !== "string" || input.identificationCode.trim().length > 30))) {
+            throw new DemoError("INPUT", "收款账号修改信息无效。");
+        }
+        return { id: input.id, ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+            ...(input.identificationCode !== undefined ? { identificationCode: input.identificationCode.trim() } : {}) };
+    }
+    if (action === "deleteAccount") {
+        fields(input, ["id"]);
+        if (!accountId(input.id)) throw new DemoError("INPUT", "收款账号 ID 无效。");
+        return { id: input.id };
+    }
+    if (action === "withdraw") {
+        fields(input, ["amount", "withdrawalAccountId"]);
+        if (!accountId(input.withdrawalAccountId) || typeof input.amount !== "string" ||
+            !/^(?:[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(input.amount)) {
+            throw new DemoError("INPUT", "请输入不低于 1 元且最多两位小数的提现金额及有效收款账号。");
+        }
+        return { amount: input.amount, withdrawalAccountId: String(input.withdrawalAccountId) };
+    }
     if (action === "wallet") {
         fields(input, ["page", "period"]);
         const page = input.page ?? 1;
@@ -110,12 +160,16 @@ function upstreamError(errors, isLogin) {
     const expired = codes.some((code) => /AUTH|TOKEN|UNAUTH|FORBIDDEN|JWT/i.test(code));
     if (expired && !isLogin) return new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
     if (isLogin) return new DemoError("LOGIN_FAILED", "测试身份或应用凭证无效，请检查本机后端的私有配置与测试环境授权。", 401);
+    if (codes.includes("CONFLICT")) return new DemoError("CONFLICT", "账号已登记或相同金额的提现正在处理中，请刷新后核对记录。", 409);
+    if (codes.includes("BAD_USER_INPUT")) return new DemoError("INPUT", "请检查金额、余额和收款账号信息。", 400);
     const reason = errors.find((item) => typeof item?.extensions?.reasonCode === "string")?.extensions?.reasonCode;
     if (typeof reason === "string" && /^[A-Z_]{2,48}$/.test(reason)) {
         return new DemoError("UPSTREAM", `上游暂不可用（${reason}）。`, 502);
     }
     return new DemoError("UPSTREAM", "接口调用失败，请核对目标环境的 SDL 与服务配置。", 502);
 }
+
+const uncertainWithdrawal = () => new DemoError("UNCERTAIN", "提现请求结果未确认，请先核对提现记录，勿重复提交。", 502);
 
 export function createDemo(config, fetchImpl = fetch) {
     const sessions = new Map();
@@ -137,19 +191,22 @@ export function createDemo(config, fetchImpl = fetch) {
                 signal: AbortSignal.timeout(12000),
             });
         } catch {
+            if (action === "withdraw") throw uncertainWithdrawal();
             throw new DemoError("NETWORK", "无法连接测试服务，请检查地址或网络。", 502);
         }
         let result;
         try {
             result = await response.json();
         } catch {
+            if (action === "withdraw") throw uncertainWithdrawal();
             throw new DemoError("UPSTREAM", "测试服务返回了非 JSON 内容。", 502);
         }
         if (Array.isArray(result.errors) && result.errors.length) {
             if (action === "wallet" && result.errors.some((item) => /AUTH|TOKEN|UNAUTH|FORBIDDEN|JWT/i.test(item?.extensions?.code ?? ""))) {
                 throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机测试应用配置。", 502);
             }
-            throw upstreamError(result.errors, action === "login");
+            const error = upstreamError(result.errors, action === "login");
+            throw action === "withdraw" && error.code === "UPSTREAM" ? uncertainWithdrawal() : error;
         }
         if (!response.ok) {
             if (operation.endpoint === "member" && [401, 403].includes(response.status)) {
@@ -158,10 +215,14 @@ export function createDemo(config, fetchImpl = fetch) {
             if (action === "wallet" && [401, 403].includes(response.status)) {
                 throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机测试应用配置。", 502);
             }
+            if (action === "withdraw") throw uncertainWithdrawal();
             throw upstreamError([], action === "login" && [401, 403].includes(response.status));
         }
         const data = result?.data?.[action === "login" ? "login" : operation.field];
-        if (data === undefined || data === null) throw new DemoError("UPSTREAM", "测试服务响应缺少所需字段。", 502);
+        if (data === undefined || data === null) {
+            if (action === "withdraw") throw uncertainWithdrawal();
+            throw new DemoError("UPSTREAM", "测试服务响应缺少所需字段。", 502);
+        }
         return data;
     }
 
@@ -190,6 +251,9 @@ export function createDemo(config, fetchImpl = fetch) {
         const variables = variablesFor(action, input);
         const authenticated = sessions.get(session);
         if (!authenticated) throw new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
+        if (writeActions.has(action) && !config.financialWritesEnabled) {
+            throw new DemoError("FINANCIAL_WRITES_DISABLED", "本机未启用隔离测试资金写操作。", 403);
+        }
         try {
             if (action === "wallet") {
                 const profile = await call("profile", {}, authenticated.token);
@@ -201,6 +265,14 @@ export function createDemo(config, fetchImpl = fetch) {
                 return { profile, ...statistics };
             }
             const result = await call(action, variables, authenticated.token);
+            if (action === "accounts") {
+                if (!Array.isArray(result) || result.some((item) => !accountId(item?.id) || !accountTypes.has(item.type) || typeof item.account !== "string")) {
+                    throw new DemoError("UPSTREAM", "收款账号列表结构无效。", 502);
+                }
+                return result.map((item) => ({ id: item.id, type: item.type,
+                    name: typeof item.name === "string" ? `${Array.from(item.name)[0] ?? ""}***` : "***",
+                    account: item.account.length > 4 ? `****${item.account.slice(-4)}` : "****", isDefault: Boolean(item.isDefault) }));
+            }
             if (["orders", "bills", "withdrawals"].includes(action) && (!Array.isArray(result.items) || typeof result.hasMore !== "boolean" && result.hasMore !== null)) {
                 throw new DemoError("UPSTREAM", "列表响应结构无效。", 502);
             }
@@ -211,5 +283,5 @@ export function createDemo(config, fetchImpl = fetch) {
         }
     }
 
-    return { login, request, logout: (session) => sessions.delete(session) };
+    return { login, request, logout: (session) => sessions.delete(session), financialWritesEnabled: config.financialWritesEnabled };
 }
