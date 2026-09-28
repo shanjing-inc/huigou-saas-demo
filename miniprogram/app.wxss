@@ -1,0 +1,2 @@
+page { background: #f7f9f8; color: #20332e; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 28rpx; }
+button { border-radius: 8rpx; }

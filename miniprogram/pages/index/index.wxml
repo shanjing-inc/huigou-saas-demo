@@ -1,0 +1,109 @@
+<view class="shell">
+    <view class="topline"><text class="mark">HUIGOU / PARTNER</text><text class="demo-tag">隔离测试 · DEMO</text></view>
+    <view class="page-title">返利联调</view>
+    <view class="subtitle">真实测试接口 · 只读资金记录</view>
+
+    <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
+    <view wx:if="{{notice}}" class="notice">{{notice}}</view>
+
+    <view wx:if="{{!connected}}" class="section">
+        <view class="section-head">测试成员</view>
+        <view class="hint">身份和应用凭证仅由本机 BFF 提供；小程序不会调用微信登录。</view>
+        <view wx:if="{{!configured}}" class="empty">尚未配置隔离测试凭证。请先检查本机 .env。</view>
+        <button class="primary" disabled="{{busy || !configured}}" loading="{{busy}}" bindtap="connect">连接测试环境</button>
+    </view>
+
+    <block wx:else>
+        <scroll-view class="tabs" scroll-x="true" enable-flex="true">
+            <view class="tabs-inner">
+                <view class="tab {{mode === 'profile' ? 'active' : ''}}" data-mode="profile" bindtap="changeTab">成员</view>
+                <view class="tab {{mode === 'promote' ? 'active' : ''}}" data-mode="promote" bindtap="changeTab">推广</view>
+                <view class="tab {{mode === 'orders' ? 'active' : ''}}" data-mode="orders" bindtap="changeTab">订单</view>
+                <view class="tab {{mode === 'bills' ? 'active' : ''}}" data-mode="bills" bindtap="changeTab">账单</view>
+                <view class="tab {{mode === 'withdrawals' ? 'active' : ''}}" data-mode="withdrawals" bindtap="changeTab">提现</view>
+            </view>
+        </scroll-view>
+
+        <view wx:if="{{mode === 'profile'}}" class="section">
+            <view class="section-head">成员资料 <text class="eyebrow">LIVE TEST</text></view>
+            <view class="stat"><text>成员 ID</text><text>{{profile.memberId}}</text></view>
+            <view class="stat"><text>Team ID</text><text>{{profile.teamId}}</text></view>
+            <view class="stat"><text>角色</text><text>{{profile.role}}</text></view>
+            <view class="stat"><text>可用余额</text><text>¥ {{profile.money}}</text></view>
+            <view class="stat"><text>待结算</text><text>¥ {{profile.pendingMoney}}</text></view>
+            <view class="stat"><text>累计提现</text><text>¥ {{profile.withdrawalMoney}}</text></view>
+            <button class="quiet" disabled="{{busy}}" bindtap="disconnect">断开会话</button>
+        </view>
+
+        <view wx:elif="{{mode === 'promote'}}" class="section">
+            <view class="section-head">分享物料 <text class="eyebrow">PARSE → LINK</text></view>
+            <textarea class="material-input" maxlength="4096" placeholder="粘贴已开通联盟的测试分享文案或商品链接" value="{{content}}" bindinput="updateContent" />
+            <button class="primary" loading="{{busy}}" disabled="{{busy || !content}}" bindtap="parse">解析内容</button>
+            <view wx:if="{{candidates.length}}" class="subhead">候选内容 · {{candidates.length}}</view>
+            <view wx:for="{{candidates}}" wx:key="index" class="candidate {{selectedIndex === index ? 'chosen' : ''}}" data-index="{{index}}" bindtap="selectCandidate">
+                <view class="candidate-photo">
+                    <image wx:if="{{item.preview.imageUrl && !item.imageFailed}}" src="{{item.preview.imageUrl}}" mode="aspectFill" lazy-load="true" data-index="{{index}}" data-version="{{item.version}}" data-image="{{item.preview.imageUrl}}" binderror="candidateImageError" />
+                    <view wx:else class="photo-fallback">暂无图片</view>
+                </view>
+                <view class="candidate-body">
+                    <view class="candidate-title">{{item.preview.title || item.detail.itemTitle || (item.type === 'goods' || item.type === 'life' ? '商品信息待补充' : '候选物料')}}</view>
+                    <view wx:if="{{item.preview.price || item.preview.coupon}}" class="candidate-offer">
+                        <text wx:if="{{item.preview.price}}" class="candidate-price">¥{{item.preview.price}}</text>
+                        <text wx:if="{{item.preview.coupon}}" class="candidate-coupon">{{item.preview.coupon}} 元券</text>
+                    </view>
+                    <view wx:elif="{{item.previewState === 'ready'}}" class="candidate-missing">价格未提供</view>
+                    <view wx:if="{{item.preview.rebate}}" class="candidate-rebate">再返 ¥{{item.preview.rebate}}</view>
+                    <view class="candidate-bottom">
+                        <text class="candidate-shop">{{item.preview.shopName || item.platform}}</text>
+                        <text wx:if="{{item.previewState === 'loading'}}" class="candidate-state">详情加载中</text>
+                        <text wx:elif="{{item.previewState === 'unavailable'}}" class="candidate-state">详情暂不可用</text>
+                        <text wx:elif="{{item.previewState === 'unsupported'}}" class="candidate-state">非商品物料</text>
+                    </view>
+                </view>
+            </view>
+            <block wx:if="{{selected}}">
+                <view class="subhead">已选候选 · {{selected.platform}}</view>
+                <view class="type-row">
+                    <view class="type {{selectedType === 'goods' ? 'selected' : ''}}" data-type="goods" bindtap="setType">商品</view>
+                    <view class="type {{selectedType === 'activity' ? 'selected' : ''}}" data-type="activity" bindtap="setType">活动</view>
+                    <view class="type {{selectedType === 'live' ? 'selected' : ''}}" data-type="live" bindtap="setType">直播</view>
+                    <view class="type {{selectedType === 'life' ? 'selected' : ''}}" data-type="life" bindtap="setType">团购</view>
+                </view>
+                <view class="actions">
+                    <button class="quiet half" disabled="{{busy || (selectedType !== 'goods' && selectedType !== 'life')}}" bindtap="getItem">刷新商品详情</button>
+                    <button class="primary half" disabled="{{busy}}" loading="{{busy}}" bindtap="createLink">生成转链</button>
+                </view>
+                <view wx:if="{{link}}" class="result">
+                    <view class="subhead">推广结果 <text class="eyebrow">LIVE TEST</text></view>
+                    <view class="url-text">{{link.url}}</view>
+                    <view wx:if="{{link.shortUrl}}" class="meta">短链：{{link.shortUrl}}</view>
+                    <view wx:if="{{link.code}}" class="meta">口令：{{link.code}}</view>
+                    <view wx:if="{{link.miniProgram}}" class="meta">小程序：{{link.miniProgram.appId}} / {{link.miniProgram.path}}</view>
+                    <button class="quiet" bindtap="copyLink">复制落地链接</button>
+                </view>
+            </block>
+        </view>
+
+        <view wx:else class="section">
+            <view class="section-head">{{mode === 'orders' ? '我的订单' : mode === 'bills' ? '我的账单' : '提现记录'}} <text class="eyebrow">LIVE TEST</text></view>
+            <view wx:if="{{busy && !loaded}}" class="empty">正在读取测试环境…</view>
+            <view wx:elif="{{loaded && !records.length}}" class="empty">测试环境暂无记录。转链成功不会立即产生订单。</view>
+            <view wx:for="{{records}}" wx:key="id" class="record">
+                <block wx:if="{{mode === 'orders'}}">
+                    <view class="record-row"><text class="strong">{{item.platform}} · {{item.orderSn}}</text><text>¥ {{item.paidAmount}}</text></view>
+                    <view class="meta">{{item.orderedAt}} · {{item.statusLabel}} · 返利 ¥ {{item.rebateMoney}}</view>
+                </block>
+                <block wx:elif="{{mode === 'bills'}}">
+                    <view class="record-row"><text class="strong">账单 #{{item.id}}</text><text>¥ {{item.amount}}</text></view>
+                    <view class="meta">{{item.createdAt}} · {{item.action === 1 ? '增加' : '减少'}} · 事件 {{item.event}} · {{item.memo}}</view>
+                </block>
+                <block wx:else>
+                    <view class="record-row"><text class="strong">提现 #{{item.id}}</text><text>¥ {{item.amount}}</text></view>
+                    <view class="meta">{{item.createdAt}} · {{item.statusLabel}}</view>
+                </block>
+            </view>
+            <button wx:if="{{hasMore}}" class="quiet" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载下一页</button>
+        </view>
+    </block>
+    <view class="footer">演示环境 · 非生产资金操作</view>
+</view>

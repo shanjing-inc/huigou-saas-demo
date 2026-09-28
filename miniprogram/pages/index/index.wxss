@@ -1,0 +1,54 @@
+.shell { min-height: 100vh; padding: 42rpx 34rpx 80rpx; box-sizing: border-box; }
+.topline { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; }
+.mark { font-size: 20rpx; font-weight: 700; color: #186454; }
+.demo-tag { color: #873b32; background: #fff0ea; font-size: 20rpx; padding: 8rpx 12rpx; border-radius: 6rpx; flex-shrink: 0; }
+.page-title { font-size: 48rpx; font-weight: 700; margin-top: 36rpx; }
+.subtitle { font-size: 24rpx; color: #66756f; margin-top: 8rpx; }
+.tabs { white-space: nowrap; width: 100%; border-bottom: 1rpx solid #dce4df; margin-top: 38rpx; }
+.tabs-inner { display: flex; width: max-content; }
+.tab { padding: 24rpx 24rpx; color: #63736b; font-size: 26rpx; flex-shrink: 0; }
+.tab.active { color: #075d4b; border-bottom: 4rpx solid #08755c; font-weight: 700; }
+.section { margin-top: 34rpx; }
+.section-head { font-weight: 700; font-size: 32rpx; margin-bottom: 22rpx; }
+.eyebrow { color: #186454; font-size: 18rpx; font-weight: 700; margin-left: 10rpx; }
+.hint,.meta,.empty { color: #67776f; font-size: 24rpx; line-height: 1.6; }
+.empty { padding: 55rpx 16rpx; text-align: center; background: #eff3f1; border-radius: 8rpx; margin: 20rpx 0; }
+.alert,.notice { padding: 22rpx; margin-top: 24rpx; border-radius: 6rpx; font-size: 24rpx; line-height: 1.5; }
+.alert { color: #923528; background: #fff0ea; }
+.notice { color: #125d4c; background: #e4f5eb; }
+button { margin: 22rpx 0 0; font-size: 26rpx; height: 82rpx; line-height: 82rpx; }
+button::after { border: 0; }
+.primary { background: #08755c; color: white; }
+.quiet { color: #075d4b; border: 1rpx solid #a5bcb0; background: transparent; }
+.stat,.record-row { display: flex; justify-content: space-between; gap: 20rpx; align-items: center; }
+.stat { padding: 23rpx 0; border-bottom: 1rpx solid #e0e6e2; font-size: 26rpx; }
+.stat text:first-child { color: #64746e; }
+.material-input { width: 100%; height: 170rpx; box-sizing: border-box; border: 1rpx solid #bbcfc3; border-radius: 6rpx; padding: 20rpx; background: #fff; font-size: 26rpx; }
+.subhead { font-size: 26rpx; font-weight: 700; margin: 38rpx 0 16rpx; }
+.candidate,.result { border: 1rpx solid #d6e2d9; background: white; border-radius: 8rpx; margin: 14rpx 0; padding: 22rpx; }
+.candidate { display: flex; align-items: flex-start; gap: 20rpx; }
+.candidate.chosen { border-color: #08755c; background: #f0f8f4; }
+.candidate-photo { width: 180rpx; height: 180rpx; flex-shrink: 0; border-radius: 6rpx; overflow: hidden; background: #edf1ee; }
+.candidate-photo image,.photo-fallback { width: 100%; height: 100%; }
+.photo-fallback { display: flex; align-items: center; justify-content: center; color: #84928a; font-size: 21rpx; }
+.candidate-body { flex: 1; min-width: 0; }
+.candidate-body .candidate-title { line-height: 1.4; max-height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.candidate-offer { display: flex; align-items: center; flex-wrap: wrap; gap: 10rpx; margin-top: 12rpx; }
+.candidate-price { font-size: 30rpx; font-weight: 700; color: #20332e; }
+.candidate-missing { margin-top: 12rpx; font-size: 22rpx; color: #7b8880; }
+.candidate-coupon { background: #ffede5; color: #ae432c; padding: 3rpx 9rpx; border-radius: 6rpx; font-size: 21rpx; }
+.candidate-rebate { display: inline-block; border: 1rpx solid #db6550; border-radius: 6rpx; color: #b74a36; padding: 2rpx 9rpx; margin-top: 10rpx; font-size: 22rpx; }
+.candidate-bottom { display: flex; justify-content: space-between; gap: 10rpx; color: #7b8880; font-size: 21rpx; margin-top: 12rpx; }
+.candidate-shop { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.candidate-state { flex-shrink: 0; }
+.candidate-title,.strong { font-weight: 600; font-size: 26rpx; overflow-wrap: anywhere; }
+.url-text { font-size: 22rpx; color: #286650; overflow-wrap: anywhere; line-height: 1.5; margin-top: 10rpx; }
+.type-row { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.type { font-size: 24rpx; border: 1rpx solid #c9d7cf; padding: 12rpx 18rpx; border-radius: 6rpx; }
+.type.selected { background: #08755c; color: white; border-color: #08755c; }
+.actions { display: flex; gap: 14rpx; }
+.actions .half { flex: 1; font-size: 24rpx; padding: 0 8rpx; }
+.record { border-bottom: 1rpx solid #dce5df; padding: 22rpx 0; }
+.record-row text { font-size: 25rpx; overflow-wrap: anywhere; }
+.record .meta { margin-top: 8rpx; }
+.footer { font-size: 20rpx; color: #889790; text-align: center; margin-top: 90rpx; }
