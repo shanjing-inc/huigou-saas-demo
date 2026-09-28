@@ -39,7 +39,6 @@ Page({
         demo: true,
         statusBarHeight: typeof wx.getSystemInfoSync === "function" ? wx.getSystemInfoSync().statusBarHeight : 20,
         configured: false,
-        financialWritesEnabled: false,
         backendReachable: false,
         checkingBackend: false,
         mode: "profile",
@@ -89,14 +88,12 @@ Page({
                 this.setData({
                     backendReachable,
                     configured: backendReachable && Boolean(data.configured),
-                    financialWritesEnabled: backendReachable && Boolean(data.financialWritesEnabled),
                     error: backendReachable ? "" : "本机端口未返回 Demo 后端状态，请检查服务和端口。",
                 });
             },
             fail: () => this.setData({
                 backendReachable: false,
                 configured: false,
-                financialWritesEnabled: false,
                 error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
             }),
             complete: () => this.setData({ checkingBackend: false }),
@@ -213,12 +210,12 @@ Page({
     },
 
     showCreateAccount() {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         this.setData({ accountFormMode: "create", editingAccountId: null, accountForm: emptyAccountForm(), clearIdentity: false, error: "" });
     },
 
     showEditAccount(event) {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         const id = Number(event.currentTarget.dataset.id);
         if (!this.data.accounts.some((account) => account.id === id)) return;
         this.setData({ accountFormMode: "edit", editingAccountId: id, accountForm: emptyAccountForm(), clearIdentity: false, error: "" });
@@ -247,7 +244,7 @@ Page({
     },
 
     saveAccount() {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         const { accountForm: form, accountFormMode, editingAccountId, clearIdentity } = this.data;
         if (!accountFormMode) return;
         let input;
@@ -281,7 +278,7 @@ Page({
     },
 
     deleteAccount(event) {
-        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        if (this.data.busy) return;
         const id = Number(event.currentTarget.dataset.id);
         if (!this.data.accounts.some((account) => account.id === id)) return;
         wx.showModal({ title: "删除收款账号", content: "仅删除账号登记；已申请的提现记录仍会保留。", success: ({ confirm }) => {
@@ -307,7 +304,7 @@ Page({
     },
 
     submitWithdrawal() {
-        if (!this.data.financialWritesEnabled || this.data.busy || this.confirmingWithdrawal) return;
+        if (this.data.busy || this.confirmingWithdrawal) return;
         const amount = this.data.withdrawalAmount.trim();
         const withdrawalAccountId = this.data.withdrawalAccountId;
         const account = this.data.accounts.find((item) => item.id === withdrawalAccountId);

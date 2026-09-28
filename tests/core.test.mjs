@@ -156,7 +156,7 @@ test("rejects scope override and refreshes session on revoked token", async () =
     await assert.rejects(demo.request("profile", {}, session), (error) => error.code === "SESSION_EXPIRED");
 });
 
-test("accounts are redacted and financial writes require explicit local opt-in", async () => {
+test("accounts are redacted without exposing private fields", async () => {
     const demo = createDemo(config, upstream);
     const { session } = await demo.login();
     const accounts = await demo.request("accounts", {}, session);
@@ -164,20 +164,10 @@ test("accounts are redacted and financial writes require explicit local opt-in",
     assert.equal(accounts[0].name, "测***");
     assert.equal(JSON.stringify(accounts).includes("sensitive"), false);
     assert.equal(JSON.stringify(accounts).includes("13800123456"), false);
-    const count = calls.length;
-    for (const [action, input] of [
-        ["createAccount", { type: 1, name: "Test", account: "13800123456" }],
-        ["updateAccount", { id: 7, name: "New" }],
-        ["deleteAccount", { id: 7 }],
-        ["withdraw", { amount: "1.00", withdrawalAccountId: 7 }],
-    ]) {
-        await assert.rejects(demo.request(action, input, session), (error) => error.code === "FINANCIAL_WRITES_DISABLED");
-    }
-    assert.equal(calls.length, count);
 });
 
-test("financial mutations accept only member-scoped validated data", async () => {
-    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), upstream);
+test("financial mutations work by default only with member-scoped validated data", async () => {
+    const demo = createDemo(config, upstream);
     const { session } = await demo.login();
     const invalid = [
         ["createAccount", { type: 4, name: "Test", account: "123" }],
@@ -215,7 +205,7 @@ test("financial mutations accept only member-scoped validated data", async () =>
 test("unconfirmed withdrawal transport failure is never reported as a definitive failure", async () => {
     const failingUpstream = (url, options) => JSON.parse(options.body).query.includes("mutation RequestWithdrawal")
         ? Promise.reject(new Error("timeout after upstream accepted")) : upstream(url, options);
-    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), failingUpstream);
+    const demo = createDemo(config, failingUpstream);
     const { session } = await demo.login();
     await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, session),
         (error) => error.code === "UNCERTAIN" && /勿重复提交/.test(error.message));
@@ -225,7 +215,7 @@ test("an in-progress duplicate withdrawal is surfaced without leaking upstream d
     const conflictingUpstream = (url, options) => JSON.parse(options.body).query.includes("mutation RequestWithdrawal")
         ? Promise.resolve(new Response(JSON.stringify({ errors: [{ message: "private duplicate detail", extensions: { code: "CONFLICT" } }] }), { status: 200 }))
         : upstream(url, options);
-    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), conflictingUpstream);
+    const demo = createDemo(config, conflictingUpstream);
     const { session } = await demo.login();
     await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, session),
         (error) => error.code === "CONFLICT" && !error.message.includes("private") && /核对记录/.test(error.message));
@@ -235,7 +225,7 @@ test("a processed withdrawal with an incomplete response is treated as uncertain
     const incomplete = (url, options) => JSON.parse(options.body).query.includes("mutation RequestWithdrawal")
         ? Promise.resolve(new Response(JSON.stringify({ data: { requestWithdrawal: null } }), { status: 200 }))
         : upstream(url, options);
-    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), incomplete);
+    const demo = createDemo(config, incomplete);
     const { session } = await demo.login();
     await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, session),
         (error) => error.code === "UNCERTAIN");
@@ -295,18 +285,26 @@ test("HTTP wallet refuses scope overrides and returns only member-scoped statist
 
 test("status does not reveal credentials; invalid host and content type are blocked", async () => {
     const status = await fetch(`${url}/api/status`);
-    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "real-test-only", financialWritesEnabled: false });
+    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "real-test-only" });
     const forbidden = await fetch(`${url}/api/status`, { headers: { origin: "https://evil.example" } });
     assert.equal(forbidden.status, 403);
     const invalid = await fetch(`${url}/api/login`, { method: "POST", body: "{}" });
     assert.equal(invalid.status, 415);
 });
 
-test("HTTP financial writes remain disabled even with a valid session", async () => {
-    const login = await post("login");
+test("HTTP financial writes require a valid member session and work without an opt-in", async () => {
     const count = calls.length;
-    const blocked = await post("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, login.body.session);
-    assert.equal(blocked.status, 403);
-    assert.equal(blocked.body.code, "FINANCIAL_WRITES_DISABLED");
+    const unauthenticated = await post("withdraw", { amount: "1.00", withdrawalAccountId: 7 });
+    assert.equal(unauthenticated.status, 401);
+    assert.equal(unauthenticated.body.code, "SESSION_EXPIRED");
     assert.equal(calls.length, count);
+    const login = await post("login");
+    const result = await post("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, login.body.session);
+    assert.equal(result.status, 200);
+    assert.equal(result.body.data.id, 5);
+    assert.equal(JSON.parse(calls.at(-1).options.body).variables.withdrawalAccountId, "7");
+    await post("logout", {}, login.body.session);
+    const expired = await post("createAccount", { type: 1, name: "Test", account: "13800123456" }, login.body.session);
+    assert.equal(expired.status, 401);
+    assert.equal(expired.body.code, "SESSION_EXPIRED");
 });
