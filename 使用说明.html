@@ -240,6 +240,13 @@
                 background: var(--white);
                 overflow-wrap: anywhere;
             }
+            .prompt-title {
+                margin: 22px 0 0;
+                font-size: 1rem;
+            }
+            .prompt-title + .ai-prompt {
+                margin-top: 8px;
+            }
             .cards {
                 display: grid;
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -592,7 +599,8 @@
                             工具的技能目录（如 Codex 的
                             <code>$CODEX_HOME/skills/huigou-saas-skills/</code
                             >），或直接让有仓库访问权限的 AI 读取该目录下的
-                            <code>SKILL.md</code>。只发送仓库链接不会自动安装 skill。
+                            <code>SKILL.md</code>。只发送仓库链接不会自动安装 skill；全局安装仅对执行安装的
+                            AI 工具环境生效。
                         </p>
                     </div>
                 </div>
@@ -602,10 +610,23 @@
                         <h3>给出任务和授权范围</h3>
                         <p>
                             提供目标环境的地址、需要核对的功能及允许执行的隔离测试操作；凭证只在可信后端私下配置，切勿发进
-                            AI 对话。可直接使用下方指令：
+                            AI 对话。以下场景可直接复制给有仓库访问权限的 AI：
                         </p>
                     </div>
                 </div>
+                <h3 class="prompt-title">安装并了解 skill</h3>
+                <blockquote class="ai-prompt">
+                    帮我把以下 skill 安装到全局技能目录，并简述这个 skill 的作用：<br />
+                    <a href="https://github.com/shanjing-inc/huigou-saas-demo/tree/master/skills/huigou-saas-skills"
+                        >https://github.com/shanjing-inc/huigou-saas-demo/tree/master/skills/huigou-saas-skills</a
+                    >
+                </blockquote>
+                <h3 class="prompt-title">集成到现有项目</h3>
+                <blockquote class="ai-prompt">
+                    使用 huigou-saas-skills，帮我集成返利功能到本项目。先检查本项目架构及目标测试环境的
+                    application/member GraphQL Schema，按已授权范围实现身份登录、商品推广和订单返利查询；涉及资金写入或生产环境操作前，先征得我确认。
+                </blockquote>
+                <h3 class="prompt-title">先核对接口，不改代码</h3>
                 <blockquote class="ai-prompt">
                     请先读取 huigou-saas-demo 仓库中的
                     <code>skills/huigou-saas-skills/SKILL.md</code>
