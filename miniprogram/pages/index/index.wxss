@@ -51,4 +51,25 @@ button::after { border: 0; }
 .record { border-bottom: 1rpx solid #dce5df; padding: 22rpx 0; }
 .record-row text { font-size: 25rpx; overflow-wrap: anywhere; }
 .record .meta { margin-top: 8rpx; }
+.order-head,.order-ident,.order-amounts,.order-times { display: flex; align-items: center; gap: 12rpx; }
+.order-head,.order-amounts { justify-content: space-between; }
+.order-ident { min-width: 0; flex-wrap: wrap; }
+.order-platform { flex-shrink: 0; font-weight: 700; font-size: 25rpx; color: #176453; }
+.order-number { color: #65736e; font-size: 22rpx; overflow-wrap: anywhere; }
+.copy-order { flex-shrink: 0; margin: 0; height: 54rpx; line-height: 52rpx; padding: 0 14rpx; font-size: 21rpx; color: #08755c; border: 1rpx solid #a5bcb0; background: transparent; }
+.order-goods { margin-top: 20rpx; border-top: 1rpx solid #e4eae6; }
+.order-good { display: flex; gap: 16rpx; padding-top: 18rpx; }
+.order-photo { width: 110rpx; height: 110rpx; flex-shrink: 0; overflow: hidden; background: #edf1ee; border-radius: 4rpx; }
+.order-photo image,.order-photo .photo-fallback { width: 100%; height: 100%; }
+.order-good-info { min-width: 0; flex: 1; }
+.order-title { font-size: 24rpx; line-height: 1.45; overflow-wrap: anywhere; }
+.order-good-meta { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 8rpx; color: #66756f; font-size: 21rpx; }
+.order-missing { padding: 22rpx 0 4rpx; color: #84928a; font-size: 22rpx; }
+.order-amounts { flex-wrap: wrap; margin: 18rpx 0 12rpx; }
+.order-amounts > view { display: flex; align-items: baseline; gap: 8rpx; }
+.order-amount-label,.order-meta,.order-times,.order-settle-note { font-size: 21rpx; color: #687870; line-height: 1.6; }
+.order-price { font-size: 29rpx; color: #20332e; font-weight: 700; }
+.order-rebate { font-size: 27rpx; color: #bd5138; font-weight: 700; }
+.order-times { flex-wrap: wrap; border-top: 1rpx solid #e4eae6; margin-top: 16rpx; padding-top: 12rpx; }
+.order-status { color: #176453; font-weight: 600; }
 .footer { font-size: 20rpx; color: #889790; text-align: center; margin-top: 90rpx; }

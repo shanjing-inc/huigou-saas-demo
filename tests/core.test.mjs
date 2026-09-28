@@ -76,6 +76,9 @@ test("fixed identity, member JWT confinement, candidate, link and empty lists", 
     for (const action of ["orders", "bills", "withdrawals"]) {
         assert.deepEqual(await demo.request(action, { page: 1 }, session), { items: [], hasMore: false });
     }
+    const orderQuery = JSON.parse(calls.find((call) => JSON.parse(call.options.body).query.includes("query Orders")).options.body).query;
+    assert.match(orderQuery, /detail\s*\{\s*payPrice invalidReason goods\s*\{\s*itemId itemTitle imageUrl itemPrice itemNum\s*\}/);
+    assert.match(orderQuery, /expectedSettleAt settledAt/);
     assert.equal(demo.logout(session), true);
     await assert.rejects(demo.request("profile", {}, session), (error) => error.code === "SESSION_EXPIRED");
 });

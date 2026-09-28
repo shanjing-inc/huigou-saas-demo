@@ -42,7 +42,11 @@ export const operations = Object.freeze({
         endpoint: "member",
         query: `query Orders($page: Int!, $limit: Int!) {
             listOrders(page: $page, limit: $limit) {
-                hasMore items { id orderSn platform orderedAt paidAmount rebateMoney status settleStatus }
+                hasMore items {
+                    id orderSn platform orderedAt paidAt confirmedAt closedAt
+                    paidAmount rebateMoney refundMoney status settleStatus expectedSettleAt settledAt
+                    detail { payPrice invalidReason goods { itemId itemTitle imageUrl itemPrice itemNum } }
+                }
             }
         }`,
         field: "listOrders",

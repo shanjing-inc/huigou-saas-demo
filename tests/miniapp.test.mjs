@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 
-function mountPage(request) {
+function mountPage(request, setClipboardData = () => {}) {
     let definition;
     runInNewContext(readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8"), {
         Page: (value) => { definition = value; },
         getApp: () => ({ globalData: { session: "local-test-session" } }),
-        wx: { request },
+        wx: { request, setClipboardData },
     });
     return {
         ...definition,
@@ -155,4 +155,32 @@ test("stale detail and image responses cannot overwrite a new parse or a disconn
     page.disconnect();
     await flush();
     assert.equal(page.data.candidates.length, 0);
+});
+
+test("orders display only returned details and distinguish pending from settled rebates", async () => {
+    const copied = [];
+    const page = mountPage((options) => options.success({ statusCode: 200, data: { data: { hasMore: false, items: [
+        { id: 1, orderSn: "JD-123", platform: "jd", status: 2, settleStatus: 1, paidAmount: "90.00", rebateMoney: "4.9400", refundMoney: "0.00", orderedAt: "2026-09-01", expectedSettleAt: "2026-10-26", detail: { payPrice: "100.00", goods: [ { itemTitle: "商品一", itemPrice: "100.00", itemNum: "1", imageUrl: "https://img.example/a.jpg" } ] } },
+        { id: 2, orderSn: "TB-456", platform: "taobao", status: -1, settleStatus: -1, paidAmount: "0.00", rebateMoney: "0.0000", refundMoney: "0.00", detail: null },
+        { id: 3, orderSn: "PDD-789", platform: "pdd", status: 4, settleStatus: 3, paidAmount: "8.00", rebateMoney: "1.0000", refundMoney: "0", detail: { goods: [] } },
+    ] } } }), (value) => copied.push(value.data));
+    page.data.mode = "orders";
+    page.loadRecords(1);
+    await flush();
+    assert.equal(page.data.records[0].platformLabel, "京东");
+    assert.equal(page.data.records[0].statusLabel, "已付款");
+    assert.equal(page.data.records[0].settleLabel, "预计返");
+    assert.equal(page.data.records[0].goods[0].itemTitle, "商品一");
+    assert.equal(page.data.records[1].goods.length, 0);
+    assert.equal(page.data.records[1].hasRebate, false);
+    assert.equal(page.data.records[1].statusLabel, "已关闭");
+    assert.equal(page.data.records[2].settleLabel, "已结清返利");
+    page.copyOrderSn({ currentTarget: { dataset: { id: 1 } } });
+    assert.deepEqual(copied, ["JD-123"]);
+    page.orderImageError({ currentTarget: { dataset: { id: 1, index: 0, image: "https://img.example/stale.jpg" } } });
+    assert.equal(page.data.records[0].goods[0].imageFailed, false);
+    page.orderImageError({ currentTarget: { dataset: { id: 1, index: 0, image: "https://img.example/a.jpg" } } });
+    assert.equal(page.data.records[0].goods[0].imageFailed, true);
+    page.copyOrderSn({ currentTarget: { dataset: { id: 99 } } });
+    assert.equal(copied.length, 1);
 });
