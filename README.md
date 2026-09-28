@@ -4,6 +4,8 @@
 
 接手维护请先阅读 [交接文档](docs/handover.md)；本文档保留启动步骤和接口安全约束。
 
+AI 辅助对接请先阅读 [合作方 GraphQL skill](skills/partner-rebate-api/SKILL.md)；它说明签名、目标环境 Schema 和授权调用边界，不替代对接人的环境授权。
+
 ## 前提与安全
 
 - Node.js >= 20.11；微信开发者工具模拟器；一套**专用隔离测试环境**、获授权的 App Key/Secret、organizationId、teamId、**隔离测试成员 OpenID**，以及已开通联盟的有效测试物料。不要使用生产客户账号、生产凭证或客户真实订单。联调目标服务须提供 HTTPS 地址。
