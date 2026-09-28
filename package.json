@@ -5,6 +5,7 @@
     "type": "module",
     "engines": { "node": ">=20.11.0" },
     "scripts": {
+        "backend": "node --env-file=.env backend/server.mjs",
         "dev": "node --env-file=.env backend/server.mjs",
         "test": "node --test tests/*.test.mjs"
     }
