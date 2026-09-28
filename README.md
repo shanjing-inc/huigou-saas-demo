@@ -16,13 +16,13 @@
 1. 将 `.env.example` 复制成不提交的 `.env`，仅在本机填写测试值。`DEMO_API_BASE_URL` 填对接人提供的测试服务 HTTPS 站点根地址（如 `https://test.example.com`）。后端会分别调用 `/api/graphql/application` 和 `/api/graphql/member`。默认端口为 8787；更改 `DEMO_PORT` 时须同步修改 `miniprogram/pages/index/index.js` 的 `BASE`。
 2. 在仓库根目录运行 `pnpm backend`（已有的 `pnpm dev` 也可用）。检查 `http://127.0.0.1:8787/api/status` 的 `configured: true`；它**仅表示私有配置格式有效**，不是接口联通结果。若小程序已先打开、后端稍后才启动，在页面点击「重新检测本机后端」；修改 `.env` 后须先重启后端，再重新检测。
 3. 微信开发者工具中导入仓库根目录。`project.config.json` 的 AppID 是本机可用的测试号，其他机器需替换为自己的测试 AppID。仅在**本地**设置 `project.private.config.json` 的 `setting.urlCheck: false`，允许模拟器访问 `http://127.0.0.1:8787`；该文件已忽略，严禁上传此开发期放宽配置。真机与体验版不在验收范围。
-4. 点击「连接测试环境」验证 `login → getProfile`；粘贴**有效测试物料**解析，明确选择候选，按需查询详情，然后生成真实转链。订单、账单、提现标签会直接查询真实测试环境（含空列表）并按需加载下一页。
+4. 点击「连接测试环境」验证 `login → getProfile`；粘贴**有效测试物料**解析，明确选择候选，按需查询详情，然后生成真实转链。订单、账单、提现标签会直接查询真实测试环境（含空列表）并按需加载下一页。钱包页显示实际成员余额，并按日/月/年读取成员收益统计；提现入口仅查看记录。
 5. 退出：关闭开发者工具项目窗口；在运行后端的终端按 `Ctrl+C`。会话仅保存在后端内存，退出即清除。
 
 ## 协议边界
 
 - 应用签名：`x-app-key`、秒级 `x-timestamp`、`x-signature`；签名为 GraphQL variables 中非空字段按 key 升序拼接 `key=value` 并追加 Secret 后的 **MD5 小写十六进制**。`login` 的 OpenID/organizationId/teamId 来自后端私有配置，客户端无法覆盖。
-- 成员请求仅走 `Authorization: Bearer <JWT>`，限定为 `getProfile`、`parsePromotionMaterial`、按需 `getPromotionItem`、`createPromotionLink`、`listOrders`、`listBills`、`listWithdrawals`。客户端和后端均不支持任意 GraphQL 查询。
+- 成员请求仅走 `Authorization: Bearer <JWT>`，限定为 `getProfile`、`parsePromotionMaterial`、按需 `getPromotionItem`、`createPromotionLink`、`listOrders`、`listBills`、`listWithdrawals`。钱包统计使用应用签名调用 `listRevenueStatistic`，成员 ID 固定由后端会话确认，客户端不能选择其他成员或任意日期。客户端和后端均不支持任意 GraphQL 查询。
 - 接口字段与提现状态以实际联调目标环境的 application/member GraphQL Schema 为准；如与 Demo 不一致，请联系对接人确认。本 Demo **不预设**尚未上线的转链入参变更或免审核提现流程。
 - 上游错误只对外返回安全的错误码/提示，不透传原始报错、Secret、JWT 或完整客户信息；订单只取编号/金额/状态等展示字段，提现不请求账号快照。错误凭证返回 `LOGIN_FAILED`，成员 Token 失效返回 `SESSION_EXPIRED` 并清空会话。
 

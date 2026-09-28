@@ -7,6 +7,7 @@ const validPlatforms = new Set([
     "vip", "xianyu", "xiaomiyoupin", "xingbake", "yanxuan",
 ]);
 const types = new Set(["goods", "activity", "live", "life"]);
+const statisticPeriods = new Set(["day", "month", "year"]);
 
 export class DemoError extends Error {
     constructor(code, message, status = 400) {
@@ -53,6 +54,15 @@ export function sign(variables, secret) {
     return createHash("md5").update(`${canonical}${secret}`, "utf8").digest("hex");
 }
 
+export function statisticRange(period, now = new Date()) {
+    if (period === "day") return {};
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+    const fields = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    const to = `${fields.year}-${fields.month}-${fields.day}`;
+    const from = new Date(Date.parse(`${to}T00:00:00Z`) - 365 * 86400000).toISOString().slice(0, 10);
+    return { from, to };
+}
+
 function fields(input, allowed) {
     if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some((key) => !allowed.includes(key))) {
         throw new DemoError("INPUT", "请求参数不符合演示接口要求。");
@@ -60,6 +70,14 @@ function fields(input, allowed) {
 }
 
 function variablesFor(action, input) {
+    if (action === "wallet") {
+        fields(input, ["page", "period"]);
+        const page = input.page ?? 1;
+        if (!Number.isSafeInteger(page) || page < 1 || page > 10000 || !statisticPeriods.has(input.period)) {
+            throw new DemoError("INPUT", "钱包统计周期或页码无效。");
+        }
+        return { page, period: input.period, limit: 20, ...statisticRange(input.period) };
+    }
     if (action === "profile") {
         fields(input, []);
         return {};
@@ -105,7 +123,7 @@ export function createDemo(config, fetchImpl = fetch) {
     async function call(action, variables, token) {
         const operation = operations[action];
         const headers = { "content-type": "application/json" };
-        if (action === "login") {
+        if (operation.endpoint === "application") {
             headers["x-app-key"] = config.appKey;
             headers["x-timestamp"] = String(Math.floor(Date.now() / 1000));
             headers["x-signature"] = sign(variables, config.secret);
@@ -127,10 +145,18 @@ export function createDemo(config, fetchImpl = fetch) {
         } catch {
             throw new DemoError("UPSTREAM", "测试服务返回了非 JSON 内容。", 502);
         }
-        if (Array.isArray(result.errors) && result.errors.length) throw upstreamError(result.errors, action === "login");
+        if (Array.isArray(result.errors) && result.errors.length) {
+            if (action === "wallet" && result.errors.some((item) => /AUTH|TOKEN|UNAUTH|FORBIDDEN|JWT/i.test(item?.extensions?.code ?? ""))) {
+                throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机测试应用配置。", 502);
+            }
+            throw upstreamError(result.errors, action === "login");
+        }
         if (!response.ok) {
-            if (action !== "login" && [401, 403].includes(response.status)) {
+            if (operation.endpoint === "member" && [401, 403].includes(response.status)) {
                 throw new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
+            }
+            if (action === "wallet" && [401, 403].includes(response.status)) {
+                throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机测试应用配置。", 502);
             }
             throw upstreamError([], action === "login" && [401, 403].includes(response.status));
         }
@@ -149,9 +175,10 @@ export function createDemo(config, fetchImpl = fetch) {
             throw new DemoError("UPSTREAM", "登录响应无效。", 502);
         }
         const session = randomBytes(32).toString("hex");
-        sessions.set(session, result.token);
+        sessions.set(session, { token: result.token, memberId: result.memberId });
         try {
             const profile = await call("profile", {}, result.token);
+            if (profile.memberId !== result.memberId) throw new DemoError("UPSTREAM", "登录成员资料与会话不匹配。", 502);
             return { session, profile };
         } catch (error) {
             sessions.delete(session);
@@ -161,10 +188,19 @@ export function createDemo(config, fetchImpl = fetch) {
 
     async function request(action, input, session) {
         const variables = variablesFor(action, input);
-        const token = sessions.get(session);
-        if (!token) throw new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
+        const authenticated = sessions.get(session);
+        if (!authenticated) throw new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
         try {
-            const result = await call(action, variables, token);
+            if (action === "wallet") {
+                const profile = await call("profile", {}, authenticated.token);
+                if (profile.memberId !== authenticated.memberId) throw new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
+                const statistics = await call("wallet", { ...variables, memberId: authenticated.memberId });
+                if (!Array.isArray(statistics.items) || typeof statistics.hasMore !== "boolean") {
+                    throw new DemoError("UPSTREAM", "统计响应结构无效。", 502);
+                }
+                return { profile, ...statistics };
+            }
+            const result = await call(action, variables, authenticated.token);
             if (["orders", "bills", "withdrawals"].includes(action) && (!Array.isArray(result.items) || typeof result.hasMore !== "boolean" && result.hasMore !== null)) {
                 throw new DemoError("UPSTREAM", "列表响应结构无效。", 502);
             }

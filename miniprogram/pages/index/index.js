@@ -1,5 +1,6 @@
 const BASE = "http://127.0.0.1:8787";
-const sections = ["profile", "promote", "orders", "bills", "withdrawals"];
+const sections = ["profile", "promote", "orders", "wallet", "bills", "withdrawals"];
+const walletPeriods = ["day", "month", "year"];
 const withdrawalLabels = {
     1: "系统审核中", 2: "已驳回", 3: "待打款", 4: "打款中",
     5: "打款成功", 6: "打款失败", 7: "人工审核中",
@@ -32,6 +33,11 @@ Page({
         error: "",
         notice: "",
         profile: null,
+        walletPeriod: "day",
+        walletStats: [],
+        walletPage: 1,
+        walletHasMore: false,
+        walletLoaded: false,
         content: "",
         candidates: [],
         selected: null,
@@ -86,7 +92,7 @@ Page({
                     if (body?.code === "SESSION_EXPIRED") {
                         this.invalidateCandidates();
                         getApp().globalData.session = "";
-                        this.setData({ connected: false, profile: null, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null });
+                        this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null });
                     }
                     reject(new Error(body?.message || "服务请求失败，请检查本机后端。"));
                 },
@@ -115,8 +121,10 @@ Page({
             this.setData({
                 connected: true, configured: true, profile: result.profile,
                 candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
-                records: [], loaded: false,
+                records: [], loaded: false, walletStats: [], walletLoaded: false, walletHasMore: false,
             });
+        }).then(() => {
+            if (this.data.connected && this.data.mode === "wallet") this.loadWallet(1);
         });
     },
 
@@ -127,7 +135,7 @@ Page({
                 await this.api("logout");
             } finally {
                 getApp().globalData.session = "";
-                this.setData({ connected: false, profile: null, candidates: [], selected: null, selectedIndex: -1, item: null, link: null, records: [], loaded: false });
+                this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, candidates: [], selected: null, selectedIndex: -1, item: null, link: null, records: [], loaded: false });
             }
         });
     },
@@ -138,6 +146,38 @@ Page({
         if (!sections.includes(mode)) return;
         this.setData({ mode, error: "", notice: "", records: [], page: 1, hasMore: false, loaded: false });
         if (["orders", "bills", "withdrawals"].includes(mode) && this.data.connected) this.loadRecords(1);
+        if (mode === "wallet" && this.data.connected) {
+            this.setData({ walletStats: [], walletPage: 1, walletHasMore: false, walletLoaded: false });
+            this.loadWallet(1);
+        }
+    },
+
+    changeWalletPeriod(event) {
+        if (this.data.busy || this.data.mode !== "wallet") return;
+        const period = event.currentTarget.dataset.period;
+        if (!walletPeriods.includes(period) || period === this.data.walletPeriod) return;
+        this.setData({ walletPeriod: period, walletStats: [], walletPage: 1, walletHasMore: false, walletLoaded: false });
+        this.loadWallet(1);
+    },
+
+    refreshWallet() {
+        if (this.data.mode === "wallet" && !this.data.busy) {
+            this.setData({ walletStats: [], walletPage: 1, walletHasMore: false, walletLoaded: false });
+            this.loadWallet(1);
+        }
+    },
+
+    loadWallet(page) {
+        this.run(async () => {
+            const period = this.data.walletPeriod;
+            const result = (await this.api("wallet", { period, page })).data;
+            if (this.data.mode !== "wallet" || period !== this.data.walletPeriod || !this.data.connected) return;
+            this.setData({
+                profile: result.profile,
+                walletStats: page === 1 ? result.items : this.data.walletStats.concat(result.items),
+                walletPage: page, walletHasMore: result.hasMore, walletLoaded: true,
+            });
+        });
     },
 
     updateContent(event) {
@@ -286,6 +326,10 @@ Page({
     },
 
     loadMore() {
+        if (this.data.mode === "wallet") {
+            if (this.data.walletHasMore) this.loadWallet(this.data.walletPage + 1);
+            return;
+        }
         if (this.data.hasMore) this.loadRecords(this.data.page + 1);
     },
 

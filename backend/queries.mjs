@@ -11,6 +11,15 @@ export const operations = Object.freeze({
         query: `query Profile { getProfile { memberId teamId role money pendingMoney withdrawalMoney } }`,
         field: "getProfile",
     },
+    wallet: {
+        endpoint: "application",
+        query: `query Wallet($memberId: Int!, $period: RevenueStatisticPeriod!, $page: Int!, $limit: Int!, $from: String, $to: String) {
+            listRevenueStatistic(memberId: $memberId, period: $period, page: $page, limit: $limit, from: $from, to: $to) {
+                hasMore items { date orderCount estimateMemberOrderCommission settledMemberOrderCommission }
+            }
+        }`,
+        field: "listRevenueStatistic",
+    },
     parse: {
         endpoint: "member",
         query: `query Parse($content: String!) {
