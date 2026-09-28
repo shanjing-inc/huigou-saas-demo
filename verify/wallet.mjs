@@ -22,7 +22,7 @@ await ide("automation_page_action", "--action", "setData", "--patch", JSON.strin
     connected: true, mode: "wallet", loaded: true, walletLoaded: true,
     notice: "离线布局样例 · 非接口金额", error: "",
     profile: { memberId: 99, money: "12.34", pendingMoney: "5.67", withdrawalMoney: "8.90" },
-}));
+}), "--wait-for-selector", ".shell", "--wait", "1");
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     walletStats: [
         { date: "2026-09-28", orderCount: 2, estimateMemberOrderCommission: "1.2400", settledMemberOrderCommission: "0.0000" },

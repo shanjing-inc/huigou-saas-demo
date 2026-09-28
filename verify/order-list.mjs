@@ -20,21 +20,21 @@ await ide("simulator_open_page", "--page", "pages/index/index");
 await ide("automation_page_action", "--action", "getData", "--data-path", "mode", "--wait-for-selector", ".shell");
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     connected: true, mode: "orders", loaded: true, notice: "离线布局样例 · 非接口订单", error: "",
-}));
+}), "--wait-for-selector", ".shell", "--wait", "1");
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     records: [
         {
-            id: 1, platformLabel: "京东", orderSn: "TEST-JD-1001", statusLabel: "已付款",
+            id: 1, platformLabel: "京东", platformMark: "京", orderSn: "TEST-JD-1001", statusLabel: "已付款", status: 2,
             settleLabel: "预计返", hasRebate: true, paidAmount: "141.00", rebateMoney: "4.9400",
-            refundMoney: "0.00", hasRefund: false, orderedAt: "2026-09-05 09:00:00",
+            refundMoney: "0.00", hasRefund: false, orderedAt: "2026-09-05 09:00:00", orderDate: "2026-09-05", rebateDate: "2026-10-26", displayPrice: "149.00",
             paidAt: "2026-09-05 09:02:00", expectedSettleAt: "2026-10-26 00:00:00", settleStatus: 1,
-            detail: { payPrice: "149.00" }, goods: [{ itemTitle: "无线蓝牙办公鼠标", itemPrice: "149.00", itemNum: "1", imageFailed: true }],
+            detail: { payPrice: "149.00" }, goods: [{ itemTitle: "无线蓝牙办公鼠标", itemPrice: "149.00", itemNum: "1", imageFailed: true }], expanded: false,
         },
         {
-            id: 2, platformLabel: "淘宝", orderSn: "TEST-TB-1002", statusLabel: "已关闭",
+            id: 2, platformLabel: "淘宝", platformMark: "淘", orderSn: "TEST-TB-1002", statusLabel: "已关闭", status: -1,
             settleLabel: "返利无效", hasRebate: false, paidAmount: "0.00", rebateMoney: "0.0000",
-            refundMoney: "0.00", hasRefund: false, orderedAt: "2026-09-06 10:00:00",
-            settleStatus: -1, detail: null, goods: [],
+            refundMoney: "0.00", hasRefund: false, orderedAt: "2026-09-06 10:00:00", orderDate: "2026-09-06", displayPrice: "0.00",
+            settleStatus: -1, detail: null, goods: [], expanded: false,
         },
     ],
 }));

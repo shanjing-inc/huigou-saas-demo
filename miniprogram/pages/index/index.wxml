@@ -1,7 +1,12 @@
-<view class="shell">
-    <view class="topline"><text class="mark">HUIGOU / PARTNER</text><text class="demo-tag">隔离测试 · DEMO</text></view>
-    <view class="page-title">返利联调</view>
-    <view class="subtitle">真实测试接口 · 只读资金记录</view>
+<view class="shell {{mode === 'orders' || mode === 'wallet' ? 'showcase-shell' : ''}}">
+    <view class="app-nav" style="padding-top: {{statusBarHeight}}px">
+        <view wx:if="{{mode === 'orders' || mode === 'wallet'}}" class="nav-back" role="button" aria-label="返回成员页面" bindtap="backToProfile">‹</view>
+        <text class="nav-title">{{mode === 'orders' ? '订单列表' : mode === 'wallet' ? '我的钱包' : '返利联调'}}</text>
+    </view>
+    <view wx:if="{{mode !== 'orders' && mode !== 'wallet'}}" class="topline"><text class="mark">HUIGOU / PARTNER</text><text class="demo-tag">隔离测试 · DEMO</text></view>
+    <view wx:if="{{mode !== 'orders' && mode !== 'wallet'}}" class="page-title">返利联调</view>
+    <view wx:if="{{mode !== 'orders' && mode !== 'wallet'}}" class="subtitle">真实测试接口 · 只读资金记录</view>
+    <view wx:else class="showcase-label">隔离测试 · DEMO</view>
 
     <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
     <view wx:if="{{notice}}" class="notice">{{notice}}</view>
@@ -15,7 +20,7 @@
     </view>
 
     <block wx:else>
-        <scroll-view class="tabs" scroll-x="true" enable-flex="true">
+        <scroll-view wx:if="{{mode !== 'orders' && mode !== 'wallet'}}" class="tabs" scroll-x="true" enable-flex="true">
             <view class="tabs-inner">
                 <view class="tab {{mode === 'profile' ? 'active' : ''}}" data-mode="profile" bindtap="changeTab">成员</view>
                 <view class="tab {{mode === 'promote' ? 'active' : ''}}" data-mode="promote" bindtap="changeTab">推广</view>
@@ -37,35 +42,33 @@
             <button class="quiet" disabled="{{busy}}" bindtap="disconnect">断开会话</button>
         </view>
 
-        <view wx:elif="{{mode === 'wallet'}}" class="section wallet-section">
-            <view class="section-head">我的钱包 <text class="eyebrow">LIVE TEST</text></view>
+        <view wx:elif="{{mode === 'wallet'}}" class="wallet-section">
             <view class="wallet-balance">
-                <view class="wallet-balance-label">可用余额 · 元</view>
+                <view class="wallet-balance-label">可用余额 (元)</view>
                 <view class="wallet-balance-main"><text class="wallet-amount">{{walletLoaded ? profile.money : '—'}}</text><button class="wallet-history" data-mode="withdrawals" bindtap="changeTab">提现记录 ›</button></view>
                 <view class="wallet-summary">
+                    <view><text>已提现金额</text><text class="wallet-summary-value">{{walletLoaded ? profile.withdrawalMoney : '—'}}</text></view>
                     <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.pendingMoney : '—'}}</text></view>
-                    <view><text>累计已提现</text><text class="wallet-summary-value">{{walletLoaded ? profile.withdrawalMoney : '—'}}</text></view>
+                    <view><text>待申请补贴</text><text class="wallet-summary-value">—</text></view>
                 </view>
             </view>
-            <view class="wallet-hint">待结算包含已提交但未到账的提现；当前页面不发起提现。</view>
-            <view class="wallet-stat-header"><text>成员订单收益</text><button class="wallet-refresh" disabled="{{busy}}" bindtap="refreshWallet">刷新</button></view>
             <view class="wallet-periods">
-                <view class="wallet-period {{walletPeriod === 'day' ? 'selected' : ''}}" data-period="day" bindtap="changeWalletPeriod">按天</view>
-                <view class="wallet-period {{walletPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="changeWalletPeriod">按月</view>
-                <view class="wallet-period {{walletPeriod === 'year' ? 'selected' : ''}}" data-period="year" bindtap="changeWalletPeriod">按年</view>
+                <view class="wallet-period {{walletPeriod === 'day' ? 'selected' : ''}}" data-period="day" bindtap="changeWalletPeriod">按天查看</view>
+                <view class="wallet-period {{walletPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="changeWalletPeriod">按月查看</view>
+                <view class="wallet-period {{walletPeriod === 'year' ? 'selected' : ''}}" data-period="year" bindtap="changeWalletPeriod">按年查看</view>
             </view>
-            <view class="wallet-hint">{{walletPeriod === 'day' ? '近30个业务日' : '近366个业务日'}} · 仅展示有数据的时段</view>
+            <view class="wallet-data-note"><text>仅显示有记录的时段 · {{walletPeriod === 'day' ? '近30个业务日' : '近366个业务日'}}</text><text class="wallet-refresh" role="button" bindtap="refreshWallet">刷新</text></view>
             <view wx:if="{{busy && !walletLoaded}}" class="empty">正在读取成员收益…</view>
             <view wx:elif="{{walletLoaded && !walletStats.length}}" class="empty">该时段暂无收益记录</view>
-            <view wx:for="{{walletStats}}" wx:key="date" class="wallet-stat-row">
-                <view class="wallet-stat-top"><text>{{item.date}} 收益</text><text>{{item.orderCount}} 笔订单</text></view>
-                <view class="wallet-stat-values">
-                    <view><text>新增预估返利</text><text class="wallet-stat-money">¥{{item.estimateMemberOrderCommission}}</text></view>
-                    <view><text>新增已结算返利</text><text class="wallet-stat-money">¥{{item.settledMemberOrderCommission}}</text></view>
+            <view wx:for="{{walletStats}}" wx:for-item="stat" wx:key="date" class="wallet-stat-row">
+                <view class="wallet-stat-top"><text>{{stat.date}} 收益</text><text>{{stat.orderCount}} 笔订单</text></view>
+                <view class="wallet-stat-grid">
+                    <view wx:for="{{walletMissingCategories}}" wx:for-item="label" wx:key="*this" class="wallet-stat-cell"><text class="wallet-stat-label">{{label}}</text><text class="wallet-stat-value">—</text></view>
                 </view>
+                <view class="wallet-stat-total"><text>成员订单返利合计</text><text>预估 ¥{{stat.estimateMemberOrderCommission}}　已结算 ¥{{stat.settledMemberOrderCommission}}</text></view>
             </view>
             <button wx:if="{{walletHasMore}}" class="quiet wallet-more" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载更早时段</button>
-            <view class="wallet-hint">上游仅提供成员订单返利汇总，暂无自购、带货、邀请、任务分项。</view>
+            <view class="wallet-hint">分项与待申请补贴暂无接口数据，显示“—”；待结算包含提现中金额。演示页只读，不发起提现。</view>
         </view>
 
         <view wx:elif="{{mode === 'promote'}}" class="section">
@@ -117,16 +120,19 @@
             </block>
         </view>
 
-        <view wx:else class="section">
-            <view class="section-head">{{mode === 'orders' ? '我的订单' : mode === 'bills' ? '我的账单' : '提现记录'}} <text class="eyebrow">LIVE TEST</text></view>
+        <view wx:else class="section {{mode === 'orders' ? 'orders-section' : ''}}">
+            <view wx:if="{{mode === 'orders'}}" class="order-switch"><view class="order-source active">全部订单</view><view class="order-source unavailable" role="button" bindtap="orderSourceNotice">分享订单</view></view>
+            <view wx:if="{{mode === 'orders'}}" class="order-tip">上游暂未区分自购与分享订单，当前展示全部来源。</view>
+            <view wx:else class="section-head">{{mode === 'bills' ? '我的账单' : '提现记录'}} <text class="eyebrow">LIVE TEST</text></view>
             <view wx:if="{{busy && !loaded}}" class="empty">正在读取测试环境…</view>
             <view wx:elif="{{loaded && !records.length}}" class="empty">测试环境暂无记录。转链成功不会立即产生订单。</view>
-            <view wx:for="{{records}}" wx:key="id" class="record">
+            <view wx:for="{{records}}" wx:key="id" class="record {{mode === 'orders' ? 'order-record' : ''}}">
                 <block wx:if="{{mode === 'orders'}}">
                     <view class="order-head">
-                        <view class="order-ident"><text class="order-platform">{{item.platformLabel}}</text><text class="order-number">订单号：{{item.orderSn}}</text></view>
-                        <button class="copy-order" size="mini" data-id="{{item.id}}" bindtap="copyOrderSn">复制</button>
+                        <view class="order-ident"><text class="order-platform">{{item.platformMark}}</text><text class="order-number">订单号：{{item.orderSn || '未提供'}}</text><text class="order-platform-name">{{item.platformLabel}}</text></view>
+                        <button class="copy-order" size="mini" disabled="{{!item.orderSn}}" data-id="{{item.id}}" bindtap="copyOrderSn">复制单号</button>
                     </view>
+                    <view wx:if="{{item.detail.invalidReason}}" class="order-reason">{{item.detail.invalidReason}}</view>
                     <view wx:if="{{item.goods.length}}" class="order-goods">
                         <view wx:for="{{item.goods}}" wx:for-item="good" wx:for-index="goodIndex" wx:key="index" class="order-good">
                             <view class="order-photo">
@@ -134,26 +140,24 @@
                                 <view wx:else class="photo-fallback">暂无图片</view>
                             </view>
                             <view class="order-good-info">
-                                <view class="order-title">{{good.itemTitle || '商品名称暂缺'}}</view>
-                                <view wx:if="{{good.itemPrice || good.itemNum}}" class="order-good-meta"><text wx:if="{{good.itemPrice}}">单价 ¥{{good.itemPrice}}</text><text wx:if="{{good.itemNum}}">数量 ×{{good.itemNum}}</text></view>
+                                <view class="order-title"><text class="order-state {{item.status === -1 || item.status === -2 ? 'closed' : ''}}">{{item.statusLabel}}</text>{{good.itemTitle || '商品名称暂缺'}}</view>
+                                <view class="order-good-meta"><text class="order-price">{{item.goods.length > 1 ? (good.itemPrice != null ? '单价 ¥ ' + good.itemPrice : '单价暂缺') : (item.displayPrice !== null ? '¥ ' + item.displayPrice : '金额暂缺')}}</text><text wx:if="{{item.hasRebate && goodIndex === 0}}" class="order-rebate"><text class="order-rebate-tag">{{item.goods.length > 1 ? '整单' : ''}}{{item.settleStatus === 1 ? '预计返' : '返'}}</text> {{item.rebateMoney != null ? item.rebateMoney : '—'}}</text><text wx:elif="{{!item.hasRebate && goodIndex === 0}}" class="order-settle-note">{{item.settleLabel}}</text></view>
                             </view>
                         </view>
                     </view>
-                    <view wx:else class="order-missing">商品明细暂未提供</view>
-                    <view class="order-amounts">
-                        <view><text class="order-amount-label">{{item.detail.payPrice ? '实付金额' : '计佣金额'}}</text><text class="order-price">¥ {{item.detail.payPrice || item.paidAmount}}</text></view>
-                        <view wx:if="{{item.hasRebate}}"><text class="order-amount-label">{{item.settleLabel}}</text><text class="order-rebate">¥ {{item.rebateMoney}}</text></view>
-                        <view wx:else class="order-settle-note">{{item.settleLabel}}</view>
+                    <view wx:else class="order-missing">商品明细暂未提供 · {{item.statusLabel}}</view>
+                    <view class="order-times"><text>下单{{item.confirmDate ? '/收货' : ''}}{{item.rebateDate ? (item.settleStatus === 1 ? '/预计结算' : '/已结算') : ''}}时间：{{item.orderDate || '—'}}{{item.confirmDate ? '/' + item.confirmDate : ''}}{{item.rebateDate ? '/' + item.rebateDate : ''}}</text><text class="order-detail-toggle" role="button" data-id="{{item.id}}" bindtap="toggleOrderDetail">{{item.expanded ? '收起' : '详情'}}⌄</text></view>
+                    <view wx:if="{{item.expanded}}" class="order-details">
+                        <view wx:if="{{item.detail.payPrice}}">实付金额 ¥{{item.detail.payPrice}}</view>
+                        <view wx:if="{{item.paidAmount}}">计佣金额 ¥{{item.paidAmount}}</view>
+                        <view wx:if="{{item.hasRefund}}">累计退款 ¥{{item.refundMoney}}</view>
+                        <view wx:for="{{item.goods}}" wx:for-item="good" wx:key="index"><text wx:if="{{good.itemPrice}}">单价 ¥{{good.itemPrice}}　</text><text wx:if="{{good.itemNum}}">数量 ×{{good.itemNum}}</text></view>
+                        <view wx:if="{{item.paidAt}}">付款 {{item.paidAt}}</view>
+                        <view wx:if="{{item.confirmedAt}}">收货 {{item.confirmedAt}}</view>
+                        <view wx:if="{{item.closedAt}}">关闭 {{item.closedAt}}</view>
+                        <view wx:if="{{item.settleStatus === 1 && item.expectedSettleAt}}">预计结算 {{item.expectedSettleAt}}</view>
+                        <view wx:if="{{item.settleStatus === 3 && item.settledAt}}">返利结清 {{item.settledAt}}</view>
                     </view>
-                    <view wx:if="{{item.detail.payPrice}}" class="order-meta">计佣金额 ¥{{item.paidAmount}}</view>
-                    <view wx:if="{{item.hasRefund}}" class="order-meta">累计退款 ¥{{item.refundMoney}}</view>
-                    <view wx:if="{{item.detail.invalidReason}}" class="order-meta">失效原因：{{item.detail.invalidReason}}</view>
-                    <view class="order-times">下单 {{item.orderedAt}}<text class="order-status">{{item.statusLabel}}</text></view>
-                    <view wx:if="{{item.paidAt}}" class="order-meta">付款 {{item.paidAt}}</view>
-                    <view wx:if="{{item.confirmedAt}}" class="order-meta">收货 {{item.confirmedAt}}</view>
-                    <view wx:if="{{item.closedAt}}" class="order-meta">关闭 {{item.closedAt}}</view>
-                    <view wx:if="{{item.settleStatus === 1 && item.expectedSettleAt}}" class="order-meta">预计结算 {{item.expectedSettleAt}}</view>
-                    <view wx:if="{{item.settleStatus === 3 && item.settledAt}}" class="order-meta">返利结清 {{item.settledAt}}</view>
                 </block>
                 <block wx:elif="{{mode === 'bills'}}">
                     <view class="record-row"><text class="strong">账单 #{{item.id}}</text><text>¥ {{item.amount}}</text></view>
