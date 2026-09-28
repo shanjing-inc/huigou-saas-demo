@@ -1,6 +1,6 @@
 # 合作方返利小程序 Demo 交接
 
-本文档随 Demo 仓库维护，记录接入时需要的使用方式、验证步骤和安全约束。启动命令、环境变量示例以根目录 [README](../README.md) 和 `.env.example` 为准；业务范围与接口定义以对接人交付的接入指南及联调目标环境的 GraphQL Schema 为准。联调进度和阻塞事项请与对接人确认。
+本文档随 Demo 仓库维护，记录接入时需要的使用方式、验证步骤和安全约束。启动命令、环境变量示例以根目录 [README](../README.md) 和 `.env.example` 为准；业务概览见 [可视化接入指南](partner-guide.html)，接口定义以联调目标环境的 GraphQL Schema 为准。联调进度和阻塞事项请与对接人确认。
 
 源码仓库：[huigou-saas-demo](https://github.com/shanjing-inc/huigou-saas-demo)（`master`）；HTTPS 克隆地址：`https://github.com/shanjing-inc/huigou-saas-demo.git`。此仓库为私有仓库，需要先取得 GitHub 访问权限。
 
