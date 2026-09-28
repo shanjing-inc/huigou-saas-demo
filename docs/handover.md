@@ -1,8 +1,8 @@
 # 合作方返利小程序 Demo 交接
 
-本文档随 Demo 仓库维护，记录接手时需要的代码边界、验证方式和安全约束。启动命令、环境变量示例以根目录 [README](../README.md) 和 `.env.example` 为准；合作方业务定义以生产仓库 `saas/docs/partner-guide.html` 为准。实时进度、审批和阻塞事项以 FEATURE-682 议题及其 MR 为准，不在这里复制状态。
+本文档随 Demo 仓库维护，记录接手时需要的代码边界、验证方式和安全约束。启动命令、环境变量示例以根目录 [README](../README.md) 和 `.env.example` 为准；合作方业务定义以生产仓库 `saas/docs/partner-guide.html` 为准。联调进度和阻塞事项以 FEATURE-682 议题为准，不在这里复制状态。
 
-源码仓库：[saas-demo](https://codeup.aliyun.com/shanjing/huigou/saas-demo)（`master`）；SSH 克隆地址：`git@codeup.aliyun.com:shanjing/huigou/saas-demo.git`。历史交付记录：[MR #1](https://codeup.aliyun.com/shanjing/huigou/saas-demo/change/1)（已合入 `master`）。
+源码仓库：[saas-demo](https://codeup.aliyun.com/shanjing/huigou/saas-demo)（`master`）；SSH 克隆地址：`git@codeup.aliyun.com:shanjing/huigou/saas-demo.git`。
 
 ## 代码与数据流
 
@@ -32,11 +32,11 @@
 - `node verify/local-smoke.mjs`：仅在确认本机 saas `127.0.0.1:4322` 指向可写的**隔离数据库**、开发调试页可预填且本机 8787 未被占用时运行。它会创建合成测试成员、临时启动 BFF，并核对资料和三个列表；不会调用转链。禁止在生产或共享客户数据库运行。
 - `DEMO_TEST_MATERIAL='<获授权的测试商品链接>' node verify/candidate-cards.mjs`：先启动配置好的本地 BFF 并打开小程序模拟器。脚本会登录、解析、只读查询商品详情，确认至少一张卡片有真实图片和价格；截图写到被 Git 忽略的 `verify/candidate-cards.jpg`。商品上游不可用会使本项失败，不能用假图或硬编码价格绕过。
 
-在联调目标上再手工核对 `login → getProfile → parsePromotionMaterial → getPromotionItem`。**只有确认专用隔离联盟账号及测试物料后**才可调用 `createPromotionLink`；核对真实返回的落地链接/口令即可，转链不代表已下单或已产生返利。订单、账单、提现列表须检查真实返回（包括空列表及分页），不能生成假记录填充界面。记录每项的环境、时间、结果与失败原因到议题/MR，切勿贴出私有响应或会话 ID。
+在联调目标上再手工核对 `login → getProfile → parsePromotionMaterial → getPromotionItem`。**只有确认专用隔离联盟账号及测试物料后**才可调用 `createPromotionLink`；核对真实返回的落地链接/口令即可，转链不代表已下单或已产生返利。订单、账单、提现列表须检查真实返回（包括空列表及分页），不能生成假记录填充界面。记录每项的环境、时间、结果与失败原因到 FEATURE-682 议题，切勿贴出私有响应或会话 ID。
 
 ## 常见边界与后续
 
 - 详情请求应传商品 ID 或详情页链接，不应把推广短链当作商品 ID。解析成功但商品上游暂不可用时，卡片仍可选择，并会显示“详情暂不可用”；排查上游前不要把失败归因于样式。
 - `SESSION_EXPIRED` 时小程序清除本地会话，需要重新连接；`UPSTREAM` 和 `NETWORK` 需分别检查目标 GraphQL SDL/服务配置、网络与商品上游。BFF 不对外透传私有错误详情。
 - 正式集成必须替换固定 OpenID：由合作方可信登录服务认证实际用户。当前 BFF 无公网身份认证或设备鉴权，不可直接部署成共享测试服务或生产服务。
-- 更新 GraphQL 字段时先对照目标环境的 `saas/src/graphql/generated/{application,member}-schema.graphql`，再改 `bff/queries.mjs`、页面和受影响测试。功能完成后更新本交接文档中的稳定操作约定；实时完成/阻塞状态继续在议题及 MR 更新。
+- 更新 GraphQL 字段时先对照目标环境的 `saas/src/graphql/generated/{application,member}-schema.graphql`，再改 `bff/queries.mjs`、页面和受影响测试。功能完成后更新本交接文档中的稳定操作约定；实时完成/阻塞状态继续在 FEATURE-682 议题更新。
