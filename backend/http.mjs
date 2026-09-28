@@ -59,7 +59,7 @@ export function createServer(env, fetchImpl) {
             if (configurationError) throw configurationError;
             const session = req.headers["x-demo-session"];
             if (req.url === "/api/login") {
-                if (Object.keys(input).length) throw new DemoError("INPUT", "登录身份由 BFF 固定配置，不能由客户端提供。");
+                if (Object.keys(input).length) throw new DemoError("INPUT", "登录身份由本机后端固定配置，不能由客户端提供。");
                 respond(res, 200, await demo.login(typeof session === "string" ? session : undefined));
             } else if (req.url === "/api/logout") {
                 if (Object.keys(input).length) throw new DemoError("INPUT", "请求参数无效。");

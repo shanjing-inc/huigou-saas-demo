@@ -6,6 +6,6 @@ if (!Number.isSafeInteger(port) || port < 1 || port > 65535) {
     process.exitCode = 1;
 } else {
     createServer(process.env).listen(port, "127.0.0.1", () => {
-        process.stdout.write(`Demo BFF listening on http://127.0.0.1:${port} (loopback only).\n`);
+        process.stdout.write(`Demo backend listening on http://127.0.0.1:${port} (loopback only).\n`);
     });
 }

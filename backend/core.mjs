@@ -22,7 +22,7 @@ export function loadConfig(env) {
     try {
         url = new URL(base);
     } catch {
-        throw new DemoError("CONFIG", "请在 BFF 私有配置中设置测试服务地址。", 503);
+        throw new DemoError("CONFIG", "请在本机后端的私有配置中设置测试服务地址。", 503);
     }
     const localHttp = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
     if ((url.protocol !== "https:" && !localHttp) || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
@@ -91,7 +91,7 @@ function upstreamError(errors, isLogin) {
     const codes = errors.map((item) => item?.extensions?.code).filter((code) => typeof code === "string");
     const expired = codes.some((code) => /AUTH|TOKEN|UNAUTH|FORBIDDEN|JWT/i.test(code));
     if (expired && !isLogin) return new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
-    if (isLogin) return new DemoError("LOGIN_FAILED", "测试身份或应用凭证无效，请检查 BFF 私有配置与测试环境授权。", 401);
+    if (isLogin) return new DemoError("LOGIN_FAILED", "测试身份或应用凭证无效，请检查本机后端的私有配置与测试环境授权。", 401);
     const reason = errors.find((item) => typeof item?.extensions?.reasonCode === "string")?.extensions?.reasonCode;
     if (typeof reason === "string" && /^[A-Z_]{2,48}$/.test(reason)) {
         return new DemoError("UPSTREAM", `上游暂不可用（${reason}）。`, 502);

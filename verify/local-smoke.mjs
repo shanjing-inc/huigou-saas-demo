@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
-import { createServer } from "../bff/http.mjs";
+import { createServer } from "../backend/http.mjs";
 
 const exec = promisify(execFile);
 const project = resolve(fileURLToPath(new URL("..", import.meta.url)));
