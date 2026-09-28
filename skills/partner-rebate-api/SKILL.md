@@ -11,6 +11,18 @@ description: 对接山景返利合作方 GraphQL API 时使用；帮助 AI 查�
 2. 浏览该环境的 `GET /api/graphql/application` 和 `GET /api/graphql/member`（GraphiQL），或对同一路径执行**纯 Schema 自省**。前者是应用级字段，后者是成员级字段；自省可匿名读取元数据，执行业务字段仍需鉴权。开发中的 SaaS 项目可对照 `src/graphql/generated/application-schema.graphql` 和 `src/graphql/generated/member-schema.graphql`；对外交付以目标环境实时 Schema 为准。`/test/service-graphiql` 是开发态调试页，生产不可用。
 3. 从 Schema 的 `Query` / `Mutation` 根字段、参数类型、字段说明、返回字段及错误码确认操作；以已开通组织、商城和物料能力为准，Schema 有字段不意味着该身份获得授权。Demo 只实现其中一小部分（见 `backend/queries.mjs`），不是 API 全集；不要为不存在的能力补造字段或数据。
 
+## 用户提供的联调商品链接
+
+以下是可用于**尝试**解析或查询的真实商品页面，不是已验证的推广商品清单；链接有效性、商品查询能力、联盟账号授权和返利资格均须在目标隔离环境核对。优先逐条输入 Demo 的「分享内容解析」并明确选择返回的候选；不要仅凭链接生成订单或假设转链成功。调用 GraphQL 时 1688 的 `PromotionPlatform` 枚举是 `alibaba`，抖音普通商品使用 `douyin` + `goods`，不要把普通商品当作 `life` 团购。
+
+| 平台 | 商品页面 |
+| --- | --- |
+| 淘宝/天猫 | https://detail.tmall.com/item.htm?id=649479273712 |
+| 京东 | https://item.jd.com/10211463817676.html |
+| 1688 | https://detail.1688.com/offer/585468402829.html |
+| 唯品会 | https://detail.vip.com/detail-1710612785-6919169191930082065.html |
+| 抖音 | https://haohuo.jinritemai.com/ecommerce/trade/detail/index.html?id=3644272059510584408 |
+
 ## 身份与调用
 
 - 应用请求：`POST /api/graphql/application`，JSON `{ "query": "...", "variables": { ... } }`，头为 `content-type: application/json`、`x-app-key`、`x-timestamp`（UTC Unix 秒）及 `x-signature`（32 位小写 MD5）。**只签最终发送的 GraphQL variables 集合**，包含业务范围 ID，不签 query、时间戳或请求路径；Secret 直接追加在规范化变量串后，不发送到服务端。标量签名与隔离 Demo 的 `backend/core.mjs` 一致；对象/数组签名请以 SaaS 的 `src/rebate/application-signature.ts` 为准，不可套用 Demo 仅适用于标量的 `sign` 实现。具体过程和请求示例见 [请求示例](references/requests.md)。签名无 nonce，时间戳有效窗口为 ±300 秒；每次请求用当前秒数。
