@@ -110,6 +110,31 @@ button::after { border: 0; }
 .wallet-stat-value { color: #393939; font-size: 27rpx; line-height: 1.5; overflow-wrap: anywhere; text-align: center; }
 .wallet-more { margin: 20rpx; }
 .wallet-hint { margin: 20rpx 24rpx; color: #888; font-size: 20rpx; line-height: 1.5; }
+.money-section { padding: 26rpx 24rpx; background: #fff; min-height: 70vh; }
+.money-actions { display: flex; gap: 14rpx; margin: 8rpx 16rpx 18rpx; }
+.money-action { flex: 1; min-width: 0; padding: 0 6rpx; font-size: 23rpx; }
+.write-warning { margin: 18rpx 24rpx; font-size: 22rpx; color: #914329; line-height: 1.5; }
+.account-row { background: #fff; border-bottom: 1rpx solid #e2e8e4; padding: 22rpx 4rpx; }
+.account-row.selectable { border: 1rpx solid #d7e2dc; border-radius: 6rpx; margin: 12rpx 0; padding: 20rpx 16rpx; }
+.account-row.chosen { border-color: #08755c; background: #eff9f3; }
+.account-main,.withdraw-balance,.withdraw-account-head { display: flex; justify-content: space-between; align-items: center; gap: 12rpx; }
+.account-main { font-size: 26rpx; color: #242c28; }
+.account-main text { min-width: 0; overflow-wrap: anywhere; }
+.account-number { font-variant-numeric: tabular-nums; }
+.account-owner { color: #64746e; margin-top: 9rpx; font-size: 23rpx; }
+.default-tag { color: #08755c; font-size: 19rpx; margin-left: 6rpx; }
+.selected-account { float: right; color: #08755c; }
+.account-controls { display: flex; gap: 16rpx; justify-content: flex-end; }
+.account-control { margin: 14rpx 0 0; font-size: 21rpx; height: 50rpx; line-height: 48rpx; color: #08755c; background: #f0f6f2; }
+.account-control.danger { color: #9b4132; background: #fff1ed; }
+.account-form { padding-top: 8rpx; }
+.clear-identity { color: #9b4132; font-size: 22rpx; padding: 16rpx 0; }
+.input-label { font-size: 24rpx; color: #41534a; margin: 24rpx 0 10rpx; }
+.money-input { width: 100%; height: 80rpx; box-sizing: border-box; padding: 0 18rpx; border: 1rpx solid #b7c9be; border-radius: 6rpx; background: #fff; font-size: 27rpx; }
+.money-section .subhead { margin: 24rpx 0 12rpx; }
+.withdraw-balance { color: #445c50; font-size: 25rpx; border-bottom: 1rpx solid #e2e8e4; padding: 14rpx 0 20rpx; }
+.withdraw-balance text:last-child { color: #1a4738; font-size: 35rpx; font-weight: 600; }
+.withdraw-account-head .wallet-refresh { font-size: 22rpx; }
 .showcase-shell .empty { margin: 12rpx; background: #fff; }
 .showcase-shell .footer { margin-top: 45rpx; }
 .footer { font-size: 20rpx; color: #889790; text-align: center; margin-top: 90rpx; }

@@ -1,6 +1,8 @@
 const BASE = "http://127.0.0.1:8787";
 const sections = ["profile", "promote", "orders", "wallet", "bills", "withdrawals"];
 const walletPeriods = ["day", "month", "year"];
+const accountLabels = { 1: "支付宝", 2: "微信", 3: "银行卡" };
+const emptyAccountForm = () => ({ type: 1, name: "", account: "", identificationCode: "", bankName: "" });
 const withdrawalLabels = {
     1: "系统审核中", 2: "已驳回", 3: "待打款", 4: "打款中",
     5: "打款成功", 6: "打款失败", 7: "人工审核中",
@@ -37,6 +39,7 @@ Page({
         demo: true,
         statusBarHeight: typeof wx.getSystemInfoSync === "function" ? wx.getSystemInfoSync().statusBarHeight : 20,
         configured: false,
+        financialWritesEnabled: false,
         backendReachable: false,
         checkingBackend: false,
         mode: "profile",
@@ -50,6 +53,15 @@ Page({
         walletPage: 1,
         walletHasMore: false,
         walletLoaded: false,
+        accounts: [],
+        accountsLoaded: false,
+        accountFormMode: "",
+        editingAccountId: null,
+        clearIdentity: false,
+        accountForm: emptyAccountForm(),
+        accountsReturnMode: "wallet",
+        withdrawalAmount: "",
+        withdrawalAccountId: null,
         content: "",
         candidates: [],
         selected: null,
@@ -77,12 +89,14 @@ Page({
                 this.setData({
                     backendReachable,
                     configured: backendReachable && Boolean(data.configured),
+                    financialWritesEnabled: backendReachable && Boolean(data.financialWritesEnabled),
                     error: backendReachable ? "" : "本机端口未返回 Demo 后端状态，请检查服务和端口。",
                 });
             },
             fail: () => this.setData({
                 backendReachable: false,
                 configured: false,
+                financialWritesEnabled: false,
                 error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
             }),
             complete: () => this.setData({ checkingBackend: false }),
@@ -104,7 +118,8 @@ Page({
                     if (body?.code === "SESSION_EXPIRED") {
                         this.invalidateCandidates();
                         getApp().globalData.session = "";
-                        this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null });
+                        this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
+                            accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
                     }
                     reject(new Error(body?.message || "服务请求失败，请检查本机后端。"));
                 },
@@ -134,6 +149,7 @@ Page({
                 connected: true, configured: true, profile: result.profile,
                 candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
                 records: [], loaded: false, walletStats: [], walletLoaded: false, walletHasMore: false,
+                accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null,
             });
         }).then(() => {
             if (this.data.connected && this.data.mode === "wallet") this.loadWallet(1);
@@ -147,7 +163,8 @@ Page({
                 await this.api("logout");
             } finally {
                 getApp().globalData.session = "";
-                this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, candidates: [], selected: null, selectedIndex: -1, item: null, link: null, records: [], loaded: false });
+                this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, candidates: [], selected: null, selectedIndex: -1, item: null, link: null, records: [], loaded: false,
+                    accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
             }
         });
     },
@@ -166,7 +183,164 @@ Page({
 
     backToProfile() {
         if (this.data.busy) return;
-        this.setData({ mode: "profile", error: "", notice: "" });
+        const mode = this.data.mode === "accounts" ? this.data.accountsReturnMode : this.data.mode === "withdraw" ? "wallet" : "profile";
+        this.setData({ mode, error: "", notice: "", accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "" });
+        if (mode === "withdraw") this.loadAccounts(true);
+    },
+
+    openAccounts() {
+        if (this.data.busy || !this.data.connected) return;
+        this.setData({ mode: "accounts", accountsReturnMode: this.data.mode === "withdraw" ? "withdraw" : "wallet", error: "", notice: "", accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false });
+        this.loadAccounts();
+    },
+
+    openWithdrawal() {
+        if (this.data.busy || !this.data.connected) return;
+        this.setData({ mode: "withdraw", error: "", notice: "", accountsLoaded: false, withdrawalAmount: "", withdrawalAccountId: null });
+        this.loadAccounts(true);
+    },
+
+    loadAccounts(refreshProfile = false) {
+        return this.run(async () => {
+            const accounts = (await this.api("accounts")).data;
+            const profile = refreshProfile ? (await this.api("profile")).data : null;
+            if (!this.data.connected || !["accounts", "withdraw"].includes(this.data.mode)) return;
+            const selected = accounts.some((item) => item.id === this.data.withdrawalAccountId)
+                ? this.data.withdrawalAccountId : (accounts.find((item) => item.isDefault) || accounts[0])?.id ?? null;
+            this.setData({ accounts: accounts.map((item) => ({ ...item, typeLabel: accountLabels[item.type] })), accountsLoaded: true,
+                withdrawalAccountId: selected, ...(profile ? { profile } : {}) });
+        });
+    },
+
+    showCreateAccount() {
+        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        this.setData({ accountFormMode: "create", editingAccountId: null, accountForm: emptyAccountForm(), clearIdentity: false, error: "" });
+    },
+
+    showEditAccount(event) {
+        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        const id = Number(event.currentTarget.dataset.id);
+        if (!this.data.accounts.some((account) => account.id === id)) return;
+        this.setData({ accountFormMode: "edit", editingAccountId: id, accountForm: emptyAccountForm(), clearIdentity: false, error: "" });
+    },
+
+    cancelAccountForm() {
+        this.setData({ accountFormMode: "", editingAccountId: null, accountForm: emptyAccountForm(), clearIdentity: false });
+    },
+
+    setAccountType(event) {
+        const type = Number(event.currentTarget.dataset.type);
+        if (![1, 2, 3].includes(type) || this.data.busy) return;
+        this.setData({ accountForm: { ...this.data.accountForm, type, account: "", bankName: "" } });
+    },
+
+    updateAccountField(event) {
+        const field = event.currentTarget.dataset.field;
+        if (!["name", "account", "identificationCode", "bankName"].includes(field)) return;
+        this.setData({ accountForm: { ...this.data.accountForm, [field]: event.detail.value } });
+    },
+
+    toggleClearIdentity() {
+        if (this.data.accountFormMode !== "edit" || this.data.busy) return;
+        this.setData({ clearIdentity: !this.data.clearIdentity,
+            accountForm: { ...this.data.accountForm, identificationCode: "" } });
+    },
+
+    saveAccount() {
+        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        const { accountForm: form, accountFormMode, editingAccountId, clearIdentity } = this.data;
+        if (!accountFormMode) return;
+        let input;
+        if (accountFormMode === "create") {
+            if (!form.name.trim() || !form.account.trim()) {
+                this.setData({ error: "请填写收款人姓名和收款账号。" });
+                return;
+            }
+            input = { type: form.type, name: form.name, account: form.account,
+                ...(form.identificationCode.trim() ? { identificationCode: form.identificationCode } : {}),
+                ...(form.type === 3 && form.bankName.trim() ? { bankName: form.bankName } : {}) };
+        } else {
+            input = { id: editingAccountId,
+                ...(form.name.trim() ? { name: form.name } : {}),
+                ...(clearIdentity ? { identificationCode: "" } : form.identificationCode.trim() ? { identificationCode: form.identificationCode } : {}) };
+            if (Object.keys(input).length === 1) {
+                this.setData({ error: "请输入要修改的姓名或证件号码。" });
+                return;
+            }
+        }
+        this.setData({ accountForm: emptyAccountForm() });
+        this.run(async () => {
+            await this.api(accountFormMode === "create" ? "createAccount" : "updateAccount", input);
+            this.setData({ accountFormMode: "", editingAccountId: null });
+            this.setData({ notice: "收款账号已保存。" });
+            const accounts = (await this.api("accounts")).data;
+            if (this.data.mode === "accounts" && this.data.connected) {
+                this.setData({ accounts: accounts.map((item) => ({ ...item, typeLabel: accountLabels[item.type] })), accountsLoaded: true, notice: "收款账号已保存。" });
+            }
+        });
+    },
+
+    deleteAccount(event) {
+        if (!this.data.financialWritesEnabled || this.data.busy) return;
+        const id = Number(event.currentTarget.dataset.id);
+        if (!this.data.accounts.some((account) => account.id === id)) return;
+        wx.showModal({ title: "删除收款账号", content: "仅删除账号登记；已申请的提现记录仍会保留。", success: ({ confirm }) => {
+            if (!confirm || this.data.busy || this.data.mode !== "accounts") return;
+            this.run(async () => {
+                await this.api("deleteAccount", { id });
+                this.cancelAccountForm();
+                const accounts = (await this.api("accounts")).data;
+                if (this.data.mode === "accounts" && this.data.connected) {
+                    this.setData({ accounts: accounts.map((item) => ({ ...item, typeLabel: accountLabels[item.type] })), accountsLoaded: true, notice: "账号已删除。" });
+                }
+            });
+        } });
+    },
+
+    updateWithdrawalAmount(event) {
+        this.setData({ withdrawalAmount: event.detail.value });
+    },
+
+    selectWithdrawalAccount(event) {
+        const id = Number(event.currentTarget.dataset.id);
+        if (this.data.accounts.some((item) => item.id === id)) this.setData({ withdrawalAccountId: id });
+    },
+
+    submitWithdrawal() {
+        if (!this.data.financialWritesEnabled || this.data.busy || this.confirmingWithdrawal) return;
+        const amount = this.data.withdrawalAmount.trim();
+        const withdrawalAccountId = this.data.withdrawalAccountId;
+        const account = this.data.accounts.find((item) => item.id === withdrawalAccountId);
+        if (!account || !/^[1-9]\d{0,9}(?:\.\d{1,2})?$/.test(amount)) {
+            this.setData({ error: "请选择收款账号，并填写不低于 1 元且最多两位小数的金额。" });
+            return;
+        }
+        this.confirmingWithdrawal = true;
+        wx.showModal({ title: "确认申请提现", content: `从隔离测试成员余额申请提现 ¥${amount} 至 ${account.typeLabel} ${account.account}？提交后将占用可用余额。`, success: ({ confirm }) => {
+            this.confirmingWithdrawal = false;
+            if (!confirm || this.data.busy || this.data.mode !== "withdraw" || !this.data.connected) return;
+            this.setData({ withdrawalAmount: "" });
+            this.run(async () => {
+                const withdrawal = (await this.api("withdraw", { amount, withdrawalAccountId })).data;
+                this.setData({ notice: `提现申请 #${withdrawal.id} 已提交，请在提现记录中查看后续状态。` });
+                let profile;
+                try {
+                    profile = (await this.api("profile")).data;
+                    if (this.data.mode === "withdraw" && this.data.connected) this.setData({ profile });
+                    await this.loadAccountsAfterWithdrawal();
+                } catch {
+                    this.setData({ error: "申请已提交，但刷新余额或默认账号失败。请查看提现记录后再操作，勿重复提交。" });
+                    return;
+                }
+            });
+        }, fail: () => { this.confirmingWithdrawal = false; } });
+    },
+
+    async loadAccountsAfterWithdrawal() {
+        const accounts = (await this.api("accounts")).data;
+        if (this.data.mode === "withdraw" && this.data.connected) {
+            this.setData({ accounts: accounts.map((item) => ({ ...item, typeLabel: accountLabels[item.type] })) });
+        }
     },
 
     toggleOrderDetail(event) {

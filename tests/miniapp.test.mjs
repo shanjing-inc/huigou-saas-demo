@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 
-function mountPage(request, setClipboardData = () => {}) {
+function mountPage(request, setClipboardData = () => {}, showModal = () => {}) {
     let definition;
     runInNewContext(readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8"), {
         Page: (value) => { definition = value; },
         getApp: () => ({ globalData: { session: "local-test-session" } }),
-        wx: { request, setClipboardData },
+        wx: { request, setClipboardData, showModal },
     });
     return {
         ...definition,
@@ -250,4 +250,97 @@ test("wallet session expiration clears balances and statistics", async () => {
     assert.equal(page.data.profile, null);
     assert.equal(page.data.walletStats.length, 0);
     assert.match(page.data.error, /会话已失效/);
+});
+
+test("account management lists masked accounts and edits via fixed routes", async () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options), () => {}, (options) => options.success({ confirm: true }));
+    page.data.financialWritesEnabled = true;
+    page.data.mode = "wallet";
+    page.openAccounts();
+    assert.equal(requests[0].url, "http://127.0.0.1:8787/api/accounts");
+    requests[0].success({ statusCode: 200, data: { data: [{ id: 7, type: 3, name: "测***", account: "****1234", isDefault: true }] } });
+    await flush();
+    assert.equal(page.data.accounts[0].typeLabel, "银行卡");
+    page.showCreateAccount();
+    page.setAccountType({ currentTarget: { dataset: { type: "3" } } });
+    for (const [field, value] of [["name", "张测试"], ["account", "6222000000001234"], ["bankName", "测试行"]]) {
+        page.updateAccountField({ currentTarget: { dataset: { field } }, detail: { value } });
+    }
+    page.saveAccount();
+    assert.equal(requests[1].url, "http://127.0.0.1:8787/api/createAccount");
+    assert.equal(requests[1].data.bankName, "测试行");
+    assert.equal(page.data.accountForm.account, "");
+    requests[1].success({ statusCode: 200, data: { data: { id: 9 } } });
+    await flush();
+    requests[2].success({ statusCode: 200, data: { data: [{ id: 9, type: 3, name: "张***", account: "****1234", isDefault: true }] } });
+    await flush();
+    page.showEditAccount({ currentTarget: { dataset: { id: 9 } } });
+    page.updateAccountField({ currentTarget: { dataset: { field: "name" } }, detail: { value: "李测试" } });
+    page.saveAccount();
+    assert.equal(requests[3].url, "http://127.0.0.1:8787/api/updateAccount");
+    assert.equal(requests[3].data.id, 9);
+    requests[3].success({ statusCode: 200, data: { data: { id: 9 } } });
+    await flush();
+    requests[4].success({ statusCode: 200, data: { data: [{ id: 9, type: 3, name: "李***", account: "****1234", isDefault: true }] } });
+    await flush();
+    page.deleteAccount({ currentTarget: { dataset: { id: 9 } } });
+    assert.equal(requests[5].url, "http://127.0.0.1:8787/api/deleteAccount");
+    requests[5].success({ statusCode: 200, data: { data: 9 } });
+    await flush();
+    requests[6].success({ statusCode: 200, data: { data: [] } });
+    await flush();
+    assert.equal(page.data.accounts.length, 0);
+});
+
+test("account identity can be cleared explicitly; canceled deletion makes no request", async () => {
+    const requests = [];
+    let modal;
+    const page = mountPage((options) => requests.push(options), () => {}, (options) => { modal = options; });
+    page.data.financialWritesEnabled = true;
+    page.data.mode = "accounts";
+    page.data.accounts = [{ id: 12, type: 1, name: "测***", account: "****3456" }];
+    page.showEditAccount({ currentTarget: { dataset: { id: 12 } } });
+    page.toggleClearIdentity();
+    page.saveAccount();
+    assert.equal(requests[0].data.identificationCode, "");
+    requests[0].success({ statusCode: 200, data: { data: { id: 12 } } });
+    await flush();
+    requests[1].success({ statusCode: 200, data: { data: page.data.accounts } });
+    await flush();
+    page.deleteAccount({ currentTarget: { dataset: { id: 12 } } });
+    modal.success({ confirm: false });
+    assert.equal(requests.length, 2);
+});
+
+test("withdrawal needs opt-in, explicit account selection and user confirmation", async () => {
+    const requests = [];
+    let modal;
+    const page = mountPage((options) => requests.push(options), () => {}, (options) => { modal = options; });
+    page.data.mode = "wallet";
+    page.openWithdrawal();
+    requests[0].success({ statusCode: 200, data: { data: [{ id: 7, type: 1, name: "测***", account: "****3456", isDefault: true }] } });
+    await flush();
+    requests[1].success({ statusCode: 200, data: { data: { memberId: 99, money: "5.00" } } });
+    await flush();
+    page.updateWithdrawalAmount({ detail: { value: "1.00" } });
+    page.submitWithdrawal();
+    assert.equal(modal, undefined);
+    page.data.financialWritesEnabled = true;
+    page.submitWithdrawal();
+    assert.match(modal.content, /\*\*\*\*3456/);
+    modal.success({ confirm: false });
+    assert.equal(requests.length, 2);
+    page.submitWithdrawal();
+    modal.success({ confirm: true });
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/withdraw");
+    assert.equal(requests[2].data.withdrawalAccountId, 7);
+    assert.equal(page.data.withdrawalAmount, "");
+    requests[2].success({ statusCode: 200, data: { data: { id: 33 } } });
+    await flush();
+    assert.match(page.data.notice, /#33/);
+    requests[3].fail();
+    await flush();
+    assert.match(page.data.error, /勿重复提交/);
+    assert.equal(requests.length, 4);
 });

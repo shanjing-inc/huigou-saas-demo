@@ -78,4 +78,37 @@ export const operations = Object.freeze({
         }`,
         field: "listWithdrawals",
     },
+    accounts: {
+        endpoint: "member",
+        query: `query WithdrawalAccounts {
+            listWithdrawalAccounts { id type name account isDefault }
+        }`,
+        field: "listWithdrawalAccounts",
+    },
+    createAccount: {
+        endpoint: "member",
+        query: `mutation CreateWithdrawalAccount($type: Int!, $name: String!, $account: String!, $identificationCode: String, $ext: String) {
+            createWithdrawalAccount(type: $type, name: $name, account: $account, identificationCode: $identificationCode, ext: $ext) { id }
+        }`,
+        field: "createWithdrawalAccount",
+    },
+    updateAccount: {
+        endpoint: "member",
+        query: `mutation UpdateWithdrawalAccount($id: Int!, $name: String, $identificationCode: String) {
+            updateWithdrawalAccount(id: $id, name: $name, identificationCode: $identificationCode) { id }
+        }`,
+        field: "updateWithdrawalAccount",
+    },
+    deleteAccount: {
+        endpoint: "member",
+        query: `mutation DeleteWithdrawalAccount($id: Int!) { deleteWithdrawalAccount(id: $id) }`,
+        field: "deleteWithdrawalAccount",
+    },
+    withdraw: {
+        endpoint: "member",
+        query: `mutation RequestWithdrawal($amount: String!, $withdrawalAccountId: ID!) {
+            requestWithdrawal(amount: $amount, withdrawalAccountId: $withdrawalAccountId) { id amount status createdAt }
+        }`,
+        field: "requestWithdrawal",
+    },
 });

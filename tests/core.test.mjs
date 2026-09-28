@@ -33,6 +33,19 @@ function upstream(url, options) {
         payload = { data: { parsePromotionMaterial: [{ platform: "jd", type: "goods", keyContent: "share", detail: { itemUrl: "https://test.example/item", itemId: "8", itemTitle: "Test" } }] } };
     } else if (query.includes("mutation Link")) {
         payload = { data: { createPromotionLink: { url: "https://test.example/ref" } } };
+    } else if (query.includes("query WithdrawalAccounts")) {
+        payload = { data: { listWithdrawalAccounts: [
+            { id: 7, type: 1, name: "测试成员", account: "13800123456", isDefault: true, identificationCode: "sensitive" },
+            { id: 8, type: 3, name: "银行测试", account: "6222000000001234", isDefault: false },
+        ] } };
+    } else if (query.includes("mutation CreateWithdrawalAccount")) {
+        payload = { data: { createWithdrawalAccount: { id: 9 } } };
+    } else if (query.includes("mutation UpdateWithdrawalAccount")) {
+        payload = { data: { updateWithdrawalAccount: { id: 7 } } };
+    } else if (query.includes("mutation DeleteWithdrawalAccount")) {
+        payload = { data: { deleteWithdrawalAccount: 7 } };
+    } else if (query.includes("mutation RequestWithdrawal")) {
+        payload = { data: { requestWithdrawal: { id: 5, amount: "1.00", status: 1, createdAt: "2026-09-28" } } };
     } else if (query.includes("query Item")) {
         payload = { data: { getPromotionItem: { itemId: "8", title: "Test", couponInfo: { amount: "20" } } } };
     } else {
@@ -143,6 +156,91 @@ test("rejects scope override and refreshes session on revoked token", async () =
     await assert.rejects(demo.request("profile", {}, session), (error) => error.code === "SESSION_EXPIRED");
 });
 
+test("accounts are redacted and financial writes require explicit local opt-in", async () => {
+    const demo = createDemo(config, upstream);
+    const { session } = await demo.login();
+    const accounts = await demo.request("accounts", {}, session);
+    assert.deepEqual(accounts.map((item) => item.account), ["****3456", "****1234"]);
+    assert.equal(accounts[0].name, "测***");
+    assert.equal(JSON.stringify(accounts).includes("sensitive"), false);
+    assert.equal(JSON.stringify(accounts).includes("13800123456"), false);
+    const count = calls.length;
+    for (const [action, input] of [
+        ["createAccount", { type: 1, name: "Test", account: "13800123456" }],
+        ["updateAccount", { id: 7, name: "New" }],
+        ["deleteAccount", { id: 7 }],
+        ["withdraw", { amount: "1.00", withdrawalAccountId: 7 }],
+    ]) {
+        await assert.rejects(demo.request(action, input, session), (error) => error.code === "FINANCIAL_WRITES_DISABLED");
+    }
+    assert.equal(calls.length, count);
+});
+
+test("financial mutations accept only member-scoped validated data", async () => {
+    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), upstream);
+    const { session } = await demo.login();
+    const invalid = [
+        ["createAccount", { type: 4, name: "Test", account: "123" }],
+        ["createAccount", { type: 1, name: "Test", account: "abc" }],
+        ["createAccount", { type: 3, name: "Test", account: "1234" }],
+        ["createAccount", { type: 2, name: "Test", account: "oid", ext: "{}" }],
+        ["updateAccount", { id: 7, account: "replacement" }],
+        ["updateAccount", { id: 7 }],
+        ["deleteAccount", { id: "7" }],
+        ["withdraw", { amount: "0.99", withdrawalAccountId: 7 }],
+        ["withdraw", { amount: "1.001", withdrawalAccountId: 7 }],
+        ["withdraw", { amount: "1.00", withdrawalAccountId: 7, memberId: 42 }],
+    ];
+    const count = calls.length;
+    for (const [action, input] of invalid) {
+        await assert.rejects(demo.request(action, input, session), (error) => error.code === "INPUT");
+    }
+    assert.equal(calls.length, count);
+    assert.deepEqual(await demo.request("createAccount", { type: 3, name: " Bank ", account: "6222 0000 0000 1234", bankName: "Test bank" }, session), { id: 9 });
+    let request = calls.at(-1);
+    assert.match(request.url, /\/api\/graphql\/member$/);
+    assert.equal(request.options.headers.authorization, "Bearer member-jwt-private");
+    assert.deepEqual(JSON.parse(request.options.body).variables, { type: 3, name: "Bank", account: "6222 0000 0000 1234", ext: '{"bankName":"Test bank"}' });
+    assert.deepEqual(await demo.request("updateAccount", { id: 7, identificationCode: "new-code" }, session), { id: 7 });
+    assert.deepEqual(JSON.parse(calls.at(-1).options.body).variables, { id: 7, identificationCode: "new-code" });
+    assert.equal(await demo.request("deleteAccount", { id: 7 }, session), 7);
+    assert.equal((await demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 8 }, session)).id, 5);
+    request = calls.at(-1);
+    assert.deepEqual(JSON.parse(request.options.body).variables, { amount: "1.00", withdrawalAccountId: "8" });
+    assert.equal(request.options.headers["x-app-key"], undefined);
+    demo.logout(session);
+    await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 8 }, session), (error) => error.code === "SESSION_EXPIRED");
+});
+
+test("unconfirmed withdrawal transport failure is never reported as a definitive failure", async () => {
+    const failingUpstream = (url, options) => JSON.parse(options.body).query.includes("mutation RequestWithdrawal")
+        ? Promise.reject(new Error("timeout after upstream accepted")) : upstream(url, options);
+    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), failingUpstream);
+    const { session } = await demo.login();
+    await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, session),
+        (error) => error.code === "UNCERTAIN" && /勿重复提交/.test(error.message));
+});
+
+test("an in-progress duplicate withdrawal is surfaced without leaking upstream details", async () => {
+    const conflictingUpstream = (url, options) => JSON.parse(options.body).query.includes("mutation RequestWithdrawal")
+        ? Promise.resolve(new Response(JSON.stringify({ errors: [{ message: "private duplicate detail", extensions: { code: "CONFLICT" } }] }), { status: 200 }))
+        : upstream(url, options);
+    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), conflictingUpstream);
+    const { session } = await demo.login();
+    await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, session),
+        (error) => error.code === "CONFLICT" && !error.message.includes("private") && /核对记录/.test(error.message));
+});
+
+test("a processed withdrawal with an incomplete response is treated as uncertain", async () => {
+    const incomplete = (url, options) => JSON.parse(options.body).query.includes("mutation RequestWithdrawal")
+        ? Promise.resolve(new Response(JSON.stringify({ data: { requestWithdrawal: null } }), { status: 200 }))
+        : upstream(url, options);
+    const demo = createDemo(loadConfig({ ...env, DEMO_ENABLE_FINANCIAL_WRITES: "1" }), incomplete);
+    const { session } = await demo.login();
+    await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, session),
+        (error) => error.code === "UNCERTAIN");
+});
+
 let server;
 let url;
 before(async () => {
@@ -197,9 +295,18 @@ test("HTTP wallet refuses scope overrides and returns only member-scoped statist
 
 test("status does not reveal credentials; invalid host and content type are blocked", async () => {
     const status = await fetch(`${url}/api/status`);
-    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "real-test-only" });
+    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "real-test-only", financialWritesEnabled: false });
     const forbidden = await fetch(`${url}/api/status`, { headers: { origin: "https://evil.example" } });
     assert.equal(forbidden.status, 403);
     const invalid = await fetch(`${url}/api/login`, { method: "POST", body: "{}" });
     assert.equal(invalid.status, 415);
+});
+
+test("HTTP financial writes remain disabled even with a valid session", async () => {
+    const login = await post("login");
+    const count = calls.length;
+    const blocked = await post("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, login.body.session);
+    assert.equal(blocked.status, 403);
+    assert.equal(blocked.body.code, "FINANCIAL_WRITES_DISABLED");
+    assert.equal(calls.length, count);
 });
