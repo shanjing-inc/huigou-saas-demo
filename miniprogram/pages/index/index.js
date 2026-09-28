@@ -8,7 +8,6 @@ const withdrawalLabels = {
 const orderLabels = { "-2": "系统关闭", "-1": "已关闭", 1: "已下单", 2: "已付款", 3: "已发货", 4: "已收货" };
 const platformLabels = { alibaba: "1688", jd: "京东", taobao: "淘宝", vip: "唯品会", pdd: "拼多多", douyin: "抖音" };
 const platformMarks = { alibaba: "阿", jd: "京", taobao: "淘", vip: "唯", pdd: "拼", douyin: "抖" };
-const walletMissingCategories = ["自购预估", "带货预估", "邀请预估", "任务预估", "自购结算", "带货结算", "邀请结算", "任务结算"];
 
 function datePart(value) {
     return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "";
@@ -51,7 +50,6 @@ Page({
         walletPage: 1,
         walletHasMore: false,
         walletLoaded: false,
-        walletMissingCategories,
         content: "",
         candidates: [],
         selected: null,
@@ -169,10 +167,6 @@ Page({
     backToProfile() {
         if (this.data.busy) return;
         this.setData({ mode: "profile", error: "", notice: "" });
-    },
-
-    orderSourceNotice() {
-        this.setData({ notice: "上游订单接口未提供自购与分享分类；当前展示全部订单，不能按来源筛选。" });
     },
 
     toggleOrderDetail(event) {

@@ -49,7 +49,6 @@
                 <view class="wallet-summary">
                     <view><text>已提现金额</text><text class="wallet-summary-value">{{walletLoaded ? profile.withdrawalMoney : '—'}}</text></view>
                     <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.pendingMoney : '—'}}</text></view>
-                    <view><text>待申请补贴</text><text class="wallet-summary-value">—</text></view>
                 </view>
             </view>
             <view class="wallet-periods">
@@ -62,13 +61,13 @@
             <view wx:elif="{{walletLoaded && !walletStats.length}}" class="empty">该时段暂无收益记录</view>
             <view wx:for="{{walletStats}}" wx:for-item="stat" wx:key="date" class="wallet-stat-row">
                 <view class="wallet-stat-top"><text>{{stat.date}} 收益</text><text>{{stat.orderCount}} 笔订单</text></view>
-                <view class="wallet-stat-grid">
-                    <view wx:for="{{walletMissingCategories}}" wx:for-item="label" wx:key="*this" class="wallet-stat-cell"><text class="wallet-stat-label">{{label}}</text><text class="wallet-stat-value">—</text></view>
+                <view class="wallet-stat-values">
+                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增预估返利</text><text class="wallet-stat-value">¥{{stat.estimateMemberOrderCommission}}</text></view>
+                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增已结算返利</text><text class="wallet-stat-value">¥{{stat.settledMemberOrderCommission}}</text></view>
                 </view>
-                <view class="wallet-stat-total"><text>成员订单返利合计</text><text>预估 ¥{{stat.estimateMemberOrderCommission}}　已结算 ¥{{stat.settledMemberOrderCommission}}</text></view>
             </view>
             <button wx:if="{{walletHasMore}}" class="quiet wallet-more" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载更早时段</button>
-            <view class="wallet-hint">分项与待申请补贴暂无接口数据，显示“—”；待结算包含提现中金额。演示页只读，不发起提现。</view>
+            <view class="wallet-hint">待结算包含提现中金额。演示页只读，不发起提现。</view>
         </view>
 
         <view wx:elif="{{mode === 'promote'}}" class="section">
@@ -121,9 +120,7 @@
         </view>
 
         <view wx:else class="section {{mode === 'orders' ? 'orders-section' : ''}}">
-            <view wx:if="{{mode === 'orders'}}" class="order-switch"><view class="order-source active">全部订单</view><view class="order-source unavailable" role="button" bindtap="orderSourceNotice">分享订单</view></view>
-            <view wx:if="{{mode === 'orders'}}" class="order-tip">上游暂未区分自购与分享订单，当前展示全部来源。</view>
-            <view wx:else class="section-head">{{mode === 'bills' ? '我的账单' : '提现记录'}} <text class="eyebrow">LIVE TEST</text></view>
+            <view wx:if="{{mode !== 'orders'}}" class="section-head">{{mode === 'bills' ? '我的账单' : '提现记录'}} <text class="eyebrow">LIVE TEST</text></view>
             <view wx:if="{{busy && !loaded}}" class="empty">正在读取测试环境…</view>
             <view wx:elif="{{loaded && !records.length}}" class="empty">测试环境暂无记录。转链成功不会立即产生订单。</view>
             <view wx:for="{{records}}" wx:key="id" class="record {{mode === 'orders' ? 'order-record' : ''}}">
