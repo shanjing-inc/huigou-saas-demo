@@ -32,7 +32,7 @@ Page({
         wx.request({
             url: `${BASE}/api/status`,
             success: ({ data }) => this.setData({ configured: Boolean(data?.configured) }),
-            fail: () => this.setData({ error: "本地 BFF 未启动，请先按 README 在本机启动。" }),
+            fail: () => this.setData({ error: "本机后端未启动，请先按 README 在本机启动。" }),
         });
     },
 
@@ -53,9 +53,9 @@ Page({
                         getApp().globalData.session = "";
                         this.setData({ connected: false, profile: null, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null });
                     }
-                    reject(new Error(body?.message || "服务请求失败，请检查本地 BFF。"));
+                    reject(new Error(body?.message || "服务请求失败，请检查本机后端。"));
                 },
-                fail: () => reject(new Error("无法连接本机 BFF；请检查端口、模拟器设置和本机网络。")),
+                fail: () => reject(new Error("无法连接本机后端；请检查端口、模拟器设置和本机网络。")),
             });
         });
     },

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Offline simulator smoke test; an unconfigured BFF is an expected state here.
+# Offline simulator smoke test; an unconfigured backend is an expected state here.
 PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
 wechatide -c Codex simulator_open_page --project "$PROJECT" --page pages/index/index
 wechatide -c Codex automation_page_action --project "$PROJECT" --action getData --wait-for-selector .shell | node -e '

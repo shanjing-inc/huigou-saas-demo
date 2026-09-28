@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { after, before, test } from "node:test";
-import { createDemo, DemoError, loadConfig, sign } from "../bff/core.mjs";
-import { createServer } from "../bff/http.mjs";
+import { createDemo, DemoError, loadConfig, sign } from "../backend/core.mjs";
+import { createServer } from "../backend/http.mjs";
 
 const env = {
     DEMO_API_BASE_URL: "https://isolated.example.test",

@@ -24,7 +24,7 @@ async function data(path) {
 }
 
 const status = await (await fetch("http://127.0.0.1:8787/api/status")).json();
-assert.equal(status.configured, true, "Start the configured local BFF first.");
+assert.equal(status.configured, true, "Start the configured local backend first.");
 const currentPage = await ide("automation_runtime_info", "--action", "currentPage");
 if (currentPage.currentPage?.path !== "pages/index/index") {
     await ide("simulator_open_page", "--page", "pages/index/index");
