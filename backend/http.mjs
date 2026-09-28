@@ -26,7 +26,7 @@ export function createServer(env, fetchImpl) {
             return;
         }
         if (req.url === "/api/status" && req.method === "GET") {
-            respond(res, 200, { demo: true, configured: Boolean(demo), mode: "real-test-only" });
+            respond(res, 200, { demo: true, configured: Boolean(demo), mode: "real-test-only", supportsAccountManagement: true });
             return;
         }
         if (req.url !== "/api/login" && req.url !== "/api/logout" && !/^\/api\/(profile|parse|item|link|orders|bills|withdrawals|wallet|accounts|createAccount|updateAccount|deleteAccount|withdraw)$/.test(req.url ?? "")) {

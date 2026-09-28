@@ -17,7 +17,7 @@ AI 辅助对接请先阅读 [合作方 GraphQL skill](skills/partner-rebate-api/
 ## 启动与最短操作链
 
 1. 将 `.env.example` 复制成不提交的 `.env`，仅在本机填写测试值。`DEMO_API_BASE_URL` 填对接人提供的测试服务 HTTPS 站点根地址（如 `https://test.example.com`）。后端会分别调用 `/api/graphql/application` 和 `/api/graphql/member`。默认端口为 8787；更改 `DEMO_PORT` 时须同步修改 `miniprogram/pages/index/index.js` 的 `BASE`。
-2. 在仓库根目录运行 `pnpm backend`（已有的 `pnpm dev` 也可用）。检查 `http://127.0.0.1:8787/api/status` 的 `configured: true`；它**仅表示私有配置格式有效**，不是接口联通结果。若小程序已先打开、后端稍后才启动，在页面点击「重新检测本机后端」；修改 `.env` 后须先重启后端，再重新检测。
+2. 在仓库根目录运行 `pnpm backend`（已有的 `pnpm dev` 也可用）。检查 `http://127.0.0.1:8787/api/status` 的 `configured: true`；它**仅表示私有配置格式有效**，不是接口联通结果。若小程序已先打开、后端稍后才启动，在页面点击「重新检测本机后端」；修改 `.env` 或更新后端代码后须先在原终端 `Ctrl+C` 停止旧进程，再运行 `pnpm backend` 并重新连接。新版状态响应应包含 `supportsAccountManagement: true`；缺少该字段说明 8787 端口仍由旧版进程提供服务。
 3. 微信开发者工具中导入仓库根目录。`project.config.json` 的 AppID 是本机可用的测试号，其他机器需替换为自己的测试 AppID。仅在**本地**设置 `project.private.config.json` 的 `setting.urlCheck: false`，允许模拟器访问 `http://127.0.0.1:8787`；该文件已忽略，严禁上传此开发期放宽配置。真机与体验版不在验收范围。
 4. 点击「连接测试环境」验证 `login → getProfile`；粘贴**有效测试物料**解析，明确选择候选，按需查询详情，然后生成真实转链。订单、账单、提现标签直接查询真实测试环境（含空列表）并按需加载下一页。钱包页显示实际成员余额及按日/月/年的收益统计。
 5. 钱包的「管理收款账号」可查看脱敏账号，也可登记支付宝、微信 OpenID 或银行卡账号，修改姓名/证件号或删除登记。账号号码、类型和开户行不能原地修改，需登记新账号再删除旧账号。首次登记自动成为默认；申请提现时选择收款账号、输入不低于 1 元且最多两位小数的金额，在确认弹窗复核后提交；成功会占用可用余额并更新默认账号，请查看提现记录确认处理状态。遇到超时或刷新失败，**先查看提现记录，不要重复提交**。
@@ -26,7 +26,7 @@ AI 辅助对接请先阅读 [合作方 GraphQL skill](skills/partner-rebate-api/
 ## 协议边界
 
 - 应用签名：`x-app-key`、秒级 `x-timestamp`、`x-signature`；签名为 GraphQL variables 中非空字段按 key 升序拼接 `key=value` 并追加 Secret 后的 **MD5 小写十六进制**。`login` 的 OpenID/organizationId/teamId 来自后端私有配置，客户端无法覆盖。
-- 成员请求仅走 `Authorization: Bearer <JWT>`，限定为 `getProfile`、`parsePromotionMaterial`、按需 `getPromotionItem`、`createPromotionLink`、`listOrders`、`listBills`、`listWithdrawals`、`listWithdrawalAccounts` 和开关保护的账号增删改及 `requestWithdrawal`。钱包统计使用应用签名调用 `listRevenueStatistic`，成员 ID 固定由后端会话确认，客户端不能选择其他成员或任意日期。客户端和后端均不支持任意 GraphQL 查询。
+- 成员请求仅走 `Authorization: Bearer <JWT>`，限定为 `getProfile`、`parsePromotionMaterial`、按需 `getPromotionItem`、`createPromotionLink`、`listOrders`、`listBills`、`listWithdrawals`、`listWithdrawalAccounts` 和账号增删改及 `requestWithdrawal`；写操作仍须有效成员会话。钱包统计使用应用签名调用 `listRevenueStatistic`，成员 ID 固定由后端会话确认，客户端不能选择其他成员或任意日期。客户端和后端均不支持任意 GraphQL 查询。
 - 接口字段与提现状态以实际联调目标环境的 application/member GraphQL Schema 为准；如与 Demo 不一致，请联系对接人确认。本 Demo **不预设**尚未上线的转链入参变更或免审核提现流程。
 - 上游错误只对外返回安全的错误码/提示，不透传原始报错、Secret、JWT 或完整客户信息；账号列表仅返回脱敏账号/姓名，证件号和银行扩展信息不下发，提现不请求账号快照。错误凭证返回 `LOGIN_FAILED`，成员 Token 失效返回 `SESSION_EXPIRED` 并清空会话。资金写请求结果不明时返回 `UNCERTAIN`，须查询提现记录，切勿直接重试。
 

@@ -43,12 +43,48 @@ test("status check can recover after the backend starts", () => {
     assert.match(page.data.error, /无法访问本机后端/);
 
     page.checkBackend();
-    requests[1].success({ statusCode: 200, data: { demo: true, configured: true } });
+    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[1].complete();
     assert.equal(page.data.backendReachable, true);
     assert.equal(page.data.configured, true);
+    assert.equal(page.data.backendSupportsAccounts, true);
     assert.equal(page.data.checkingBackend, false);
     assert.equal(page.data.error, "");
+});
+
+test("old backend status blocks account page and recovers after a restart", async () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.connected = false;
+    page.checkBackend();
+    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, mode: "real-test-only" } });
+    requests[0].complete();
+    assert.equal(page.data.backendSupportsAccounts, false);
+    assert.match(page.data.error, /旧版 Demo 后端/);
+    page.data.connected = true;
+    page.openAccounts();
+    assert.equal(requests.length, 1);
+
+    page.checkBackend();
+    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[1].complete();
+    assert.equal(page.data.backendSupportsAccounts, true);
+    assert.equal(page.data.error, "");
+    page.openAccounts();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/accounts");
+    requests[2].success({ statusCode: 200, data: { data: [] } });
+    await flush();
+});
+
+test("missing account route suggests restarting the local backend", async () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.backendSupportsAccounts = true;
+    page.openAccounts();
+    requests[0].success({ statusCode: 404, data: { code: "NOT_FOUND", message: "接口不存在。" } });
+    await flush();
+    assert.equal(page.data.backendSupportsAccounts, false);
+    assert.match(page.data.error, /重启后端并重新连接/);
 });
 
 test("status check rejects a different local service", () => {
@@ -255,6 +291,7 @@ test("wallet session expiration clears balances and statistics", async () => {
 test("account management lists masked accounts and edits via fixed routes", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options), () => {}, (options) => options.success({ confirm: true }));
+    page.data.backendSupportsAccounts = true;
     page.data.mode = "wallet";
     page.openAccounts();
     assert.equal(requests[0].url, "http://127.0.0.1:8787/api/accounts");
@@ -316,6 +353,7 @@ test("withdrawal requires account selection and user confirmation without a swit
     let modal;
     const page = mountPage((options) => requests.push(options), () => {}, (options) => { modal = options; });
     page.data.mode = "wallet";
+    page.data.backendSupportsAccounts = true;
     page.openWithdrawal();
     requests[0].success({ statusCode: 200, data: { data: [{ id: 7, type: 1, name: "测***", account: "****3456", isDefault: true }] } });
     await flush();

@@ -285,7 +285,7 @@ test("HTTP wallet refuses scope overrides and returns only member-scoped statist
 
 test("status does not reveal credentials; invalid host and content type are blocked", async () => {
     const status = await fetch(`${url}/api/status`);
-    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "real-test-only" });
+    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "real-test-only", supportsAccountManagement: true });
     const forbidden = await fetch(`${url}/api/status`, { headers: { origin: "https://evil.example" } });
     assert.equal(forbidden.status, 403);
     const invalid = await fetch(`${url}/api/login`, { method: "POST", body: "{}" });
