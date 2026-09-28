@@ -4,7 +4,13 @@ import { Marked } from "marked";
 const root = new URL("../", import.meta.url);
 const source = "skills/huigou-saas-skills/references/guide.md";
 const output = new URL("使用说明.html", root);
-const markdown = await readFile(new URL(source, root), "utf8");
+const guide = await readFile(new URL(source, root), "utf8");
+const include = "<!-- include:capabilities.md -->";
+if (guide.split(include).length !== 2) {
+    throw new Error("guide.md 必须包含一个功能导航引用：" + include);
+}
+const capabilities = await readFile(new URL("capabilities.md", new URL(source, root)), "utf8");
+const markdown = guide.replace(include, () => capabilities);
 const template = await readFile(new URL("scripts/guide-template.html", root), "utf8");
 const repo = "https://github.com/shanjing-inc/huigou-saas-demo/blob/master/";
 const sections = [];

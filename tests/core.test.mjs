@@ -63,7 +63,7 @@ test("validates isolated configuration and signs sorted GraphQL variables", () =
     for (const base of ["http://127.0.0.1.evil.example:4322", "http://[::1]:4322", "http://localhost:4322/other", "http://user:pass@localhost:4322"]) {
         assert.throws(() => loadConfig({ ...env, DEMO_API_BASE_URL: base }), /HTTPS/);
     }
-    assert.throws(() => loadConfig({ ...env, DEMO_APP_SECRET: "replace-with-secret" }), /隔离测试/);
+    assert.throws(() => loadConfig({ ...env, DEMO_APP_SECRET: "replace-with-secret" }), (error) => error.code === "CONFIG");
     const vars = { teamId: 34, openid: "test-only-openid", organizationId: 12 };
     assert.equal(sign(vars, config.secret), createHash("md5").update("openid=test-only-openid&organizationId=12&teamId=34test-secret").digest("hex"));
 });
@@ -285,7 +285,7 @@ test("HTTP wallet refuses scope overrides and returns only member-scoped statist
 
 test("status does not reveal credentials; invalid host and content type are blocked", async () => {
     const status = await fetch(`${url}/api/status`);
-    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "real-test-only", supportsAccountManagement: true });
+    assert.deepEqual(await status.json(), { demo: true, configured: true, mode: "live", supportsAccountManagement: true });
     const forbidden = await fetch(`${url}/api/status`, { headers: { origin: "https://evil.example" } });
     assert.equal(forbidden.status, 403);
     const invalid = await fetch(`${url}/api/login`, { method: "POST", body: "{}" });

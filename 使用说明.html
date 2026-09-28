@@ -51,41 +51,22 @@
     <a class="skip" href="#content">跳到正文</a>
     <header><nav aria-label="页面目录"><a href="#section-1">能做什么</a>
 <a href="#section-2">怎么接入</a>
-<a href="#section-3">让 AI 帮你开发</a>
-<a href="#section-4">提现时注意什么</a></nav></header>
+<a href="#section-3">功能与接口</a>
+<a href="#section-4">让 AI 帮你开发</a></nav></header>
     <main id="content"><h1>惠购 Saas 版 · 使用说明</h1>
 <p>为你的应用接入商品推广、订单返利和提现功能。想先体验小程序？按 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/README.md">Demo README</a> 启动。</p>
 <h2 id="section-1">能做什么</h2>
 <p><strong>用户登录 → 分享商品 → 生成推广链接 → 用户下单 → 订单结算 → 申请提现</strong></p>
 <p>支持哪些商城和商品，以对接人为你开通的范围为准。</p>
-<table>
-<thead>
-<tr>
-<th>功能</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>商品推广</td>
-<td>解析分享内容、选择商品、查看详情、生成推广链接。</td>
-</tr>
-<tr>
-<td>订单与钱包</td>
-<td>查看订单、账单、余额和收益统计。生成链接后，用户还需下单才可能产生返利。</td>
-</tr>
-<tr>
-<td>收款与提现</td>
-<td>管理收款账号、申请提现、查询处理状态。系统记录处理结果，实际打款由约定的处理方完成。</td>
-</tr>
-</tbody></table>
+<p>生成链接后，用户还需下单才可能产生返利。系统记录提现处理结果，实际打款由约定的处理方完成。</p>
 <p>预估返利还未到账，只有<strong>可用余额</strong>能申请提现。<code>pendingMoney</code>（待结算）包含未结算返利和在途提现本金；收益统计也不是钱包余额。</p>
 <h2 id="section-2">怎么接入</h2>
 <ol>
-<li><strong>拿到测试配置。</strong> 向对接人取得 HTTPS 服务地址、App Key/Secret、组织 ID 和 Team ID。组织表示授权范围，Team 表示成员归属。</li>
+<li><strong>准备接入配置。</strong> Demo 使用正式服务域名和应用凭证。向对接人取得 App Key/Secret、组织 ID 和 Team ID；已有配置可直接使用。组织表示授权范围，Team 表示成员归属。</li>
 <li><strong>让后端登录。</strong> 先认证自己的用户，再用可信 OpenID、组织 ID、Team ID 调用 <code>login</code>，取得成员 Token（用户身份凭证）。密钥和 Token 只保存在可信后端，不放进小程序、网页或聊天。</li>
 <li><strong>确认身份，再接业务。</strong> 用 Token 调用 <code>getProfile</code>，核对成员和钱包；之后按需接商品、订单或提现功能。切换组织或 Team 时重新登录。</li>
 </ol>
-<p>我们负责开通服务、商城能力并提供接口；你负责用户认证、页面和后端集成。Demo 使用固定测试 OpenID，正式接入需要替换为真实用户认证。</p>
+<p>我们负责开通服务、商城能力并提供接口；你负责用户认证、页面和后端集成。Demo 使用配置中的固定 OpenID，面向用户的应用需要按实际登录用户取得 OpenID。</p>
 <h3>去哪里看接口文档</h3>
 <p>在<strong>对接人提供的目标站点</strong>后加以下路径：</p>
 <ul>
@@ -93,8 +74,45 @@
 <li><code>/api/graphql/member</code>：成员接口，用 <code>Authorization: Bearer &lt;Token&gt;</code> 鉴权。</li>
 </ul>
 <p>浏览器直接打开可进入 <strong>Yoga GraphiQL</strong>，在 Docs 中查看字段。GraphQL 文档插件也可向同一地址发送 POST JSON 自省查询（<code>__schema</code> / <code>__type</code>）导入文档。文档元数据可匿名读取，业务调用仍需鉴权和授权。</p>
-<p>字段和参数以目标环境的 Schema（接口定义）为准。开发时查阅 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/requests.md">签名与请求示例</a>；商品联调可用 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/test-materials.md">测试商品链接</a>。</p>
-<h2 id="section-3">让 AI 帮你开发</h2>
+<p>字段和参数以所连接服务的 Schema（接口定义）为准。开发时查阅 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/requests.md">签名与请求示例</a>；商品联调可用 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/test-materials.md">商品样例链接</a>。</p>
+<p>功能与调用顺序见 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/capabilities.md">功能与接口</a>。</p>
+<h2 id="section-3">功能与接口</h2>
+<p>下表列出 Demo 已使用的接口。应用接口用密钥签名，成员接口用登录得到的 Token；具体参数、返回字段及更多能力请查当前服务的 GraphQL 文档。</p>
+<table>
+<thead>
+<tr>
+<th>想做什么</th>
+<th>调用身份与顺序</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>登录、查看资料</td>
+<td>应用调用 <code>login</code> → 成员调用 <code>getProfile</code>，确认成员和 Team。</td>
+</tr>
+<tr>
+<td>把分享内容变成推广链接</td>
+<td>成员：<code>parsePromotionMaterial</code> → 选择候选 → 按需 <code>getPromotionItem</code> → <code>createPromotionLink</code>。</td>
+</tr>
+<tr>
+<td>查看订单和账单</td>
+<td>成员：<code>listOrders</code> / <code>listBills</code>；按分页继续读取。</td>
+</tr>
+<tr>
+<td>查看余额和收益</td>
+<td>成员用 <code>getProfile</code> 查余额；应用用 <code>listRevenueStatistic</code> 查收益统计，由后端绑定当前成员 ID。</td>
+</tr>
+<tr>
+<td>管理收款账号</td>
+<td>成员：<code>listWithdrawalAccounts</code> → 按需 <code>createWithdrawalAccount</code> / <code>updateWithdrawalAccount</code> / <code>deleteWithdrawalAccount</code>。</td>
+</tr>
+<tr>
+<td>申请提现、查看进度</td>
+<td>成员：<code>getProfile</code> → <code>listWithdrawalAccounts</code> → 核对账号和金额 → <code>requestWithdrawal</code> → <code>listWithdrawals</code>。</td>
+</tr>
+</tbody></table>
+<p>商品详情优先用解析出的商品 ID，转链用候选商品链接。账号变更和提现会影响实际数据，只执行用户已授权的操作；提现结果不明时先查记录。</p>
+<p>遇到报错时查 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/errors.md">接口错误处理</a>。</p>
+<h2 id="section-4">让 AI 帮你开发</h2>
 <p>先确保 AI 能访问 <a href="https://github.com/shanjing-inc/huigou-saas-demo">Demo 仓库</a>，再复制下面的指令。</p>
 <h3>安装一次</h3>
 <blockquote>
@@ -104,23 +122,13 @@
 <p>需安装整个目录（含 <code>references/</code>）。也可以让 AI 直接读取仓库中的 <code>skills/huigou-saas-skills/SKILL.md</code>。</p>
 <h3>开始集成</h3>
 <blockquote>
-<p>使用 huigou-saas-skills，帮我在本项目接入返利功能。先实现登录、商品转链和订单查询；测试地址由我提供，凭证从后端私有配置读取。</p>
+<p>使用 huigou-saas-skills，帮我在本项目接入返利功能。先实现登录、商品转链和订单查询；使用已配置的服务地址，凭证从后端私有配置读取。</p>
 </blockquote>
 <h3>先了解接口</h3>
 <blockquote>
-<p>使用 huigou-saas-skills，查看测试环境接口文档，说明提现功能需要哪些接口。本次只读分析。</p>
+<p>使用 huigou-saas-skills，查看接口文档，说明提现功能需要哪些接口。本次只读分析。</p>
 </blockquote>
-<p>安装 skill 不会自动取得接口权限。需要执行账号变更、提现等操作时，说明允许操作的测试环境和范围。</p>
-<h2 id="section-4">提现时注意什么</h2>
-<ul>
-<li>Demo 登录测试身份后即可管理账号和申请提现，无需额外开关；仅用于获授权的专用隔离测试环境。</li>
-<li>账号号码、类型或开户行变了，要新建账号再删除旧账号。首次登记会设为默认，后续提现所用账号会自动成为默认。</li>
-<li>修改账号时留空表示不改；清空证件号需明确勾选。列表仅显示脱敏账号资料。</li>
-<li>Demo 提现金额至少 1 元，最多两位小数。提交成功会占用可用余额，处理进度看提现记录。</li>
-<li>提交超时或结果不明时，先查记录，避免重复提现。</li>
-</ul>
-<p>联调问题请向对接人提供接口名、时间和脱敏错误码，不发送密钥、完整 Token 或收款资料。</p>
-<p>本说明为联调预览版，尚未正式对外交接。</p>
+<p>安装 skill 不会自动取得接口权限。需要执行账号变更、提现等操作时，说明允许操作的成员和范围。</p>
 </main>
 </body>
 </html>
