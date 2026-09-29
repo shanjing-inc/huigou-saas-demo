@@ -6,3 +6,4 @@ node_modules/
 project.private.config.json
 *.log
 verify/*.jpg
+.history
