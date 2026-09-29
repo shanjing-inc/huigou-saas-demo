@@ -66,7 +66,7 @@ button::after { border: 0; }
 .order-platform { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 34rpx; height: 34rpx; border-radius: 5rpx; color: #fff; background: #ff5639; font-size: 21rpx; }
 .order-number { min-width: 0; color: #777; font-size: 21rpx; overflow-wrap: anywhere; }
 .order-platform-name { flex-shrink: 0; color: #808080; font-size: 19rpx; }
-.copy-order { flex-shrink: 0; margin: 0; height: 44rpx; line-height: 42rpx; padding: 0 9rpx; font-size: 19rpx; color: #ee694f; border: 1rpx solid #ff9a84; background: #fff; border-radius: 6rpx; }
+.copy-order { display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; margin: 0; min-width: 144rpx; height: 44rpx; line-height: 1; padding: 0 9rpx; font-size: 19rpx; color: #ee694f; border: 1rpx solid #ff9a84; background: #fff; border-radius: 6rpx; }
 .order-reason { padding: 7rpx 20rpx; color: #999; background: #f1f1f1; font-size: 19rpx; }
 .order-goods { padding: 0 20rpx; }
 .order-good { display: flex; align-items: center; gap: 16rpx; padding: 15rpx 0; border-bottom: 1rpx solid #f1f1f1; }
@@ -82,16 +82,14 @@ button::after { border: 0; }
 .order-rebate-tag { padding: 2rpx 6rpx; border-radius: 5rpx; background: #ff6247; color: #fff; font-size: 18rpx; font-weight: 400; }
 .order-settle-note,.order-missing { color: #999; font-size: 20rpx; }
 .order-missing { padding: 20rpx; }
-.order-times { justify-content: space-between; gap: 8rpx; padding: 12rpx 20rpx; color: #999; font-size: 19rpx; line-height: 1.5; }
-.order-times text:first-child { min-width: 0; overflow-wrap: anywhere; }
-.order-detail-toggle { flex-shrink: 0; color: #777; font-size: 20rpx; }
-.order-details { padding: 12rpx 20rpx 20rpx; border-top: 1rpx solid #eee; color: #777; font-size: 21rpx; line-height: 1.7; }
+.order-times { padding: 12rpx 20rpx; color: #999; font-size: 19rpx; line-height: 1.5; }
+.order-times text { min-width: 0; overflow-wrap: anywhere; }
 .wallet-section { background: #f6f6f6; }
 .wallet-balance { background: #ff6247; color: #fff; padding: 26rpx 24rpx 20rpx; }
 .wallet-balance-label { font-size: 21rpx; }
 .wallet-balance-main { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 3rpx; }
 .wallet-amount { font-size: 54rpx; font-weight: 400; overflow-wrap: anywhere; min-width: 0; }
-.wallet-history { flex-shrink: 0; margin: 0; height: 50rpx; line-height: 50rpx; padding: 0 15rpx; font-size: 20rpx; border-radius: 28rpx; background: #fff; color: #f05f49; }
+.wallet-withdraw { flex-shrink: 0; margin: 0; height: 50rpx; line-height: 50rpx; padding: 0 15rpx; font-size: 20rpx; border-radius: 28rpx; background: #fff; color: #f05f49; }
 .wallet-summary { display: flex; margin-top: 24rpx; }
 .wallet-summary > view { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4rpx; padding: 0 4rpx; text-align: center; font-size: 18rpx; line-height: 1.4; }
 .wallet-summary-value { font-size: 25rpx; overflow-wrap: anywhere; }
@@ -111,6 +109,11 @@ button::after { border: 0; }
 .wallet-more { margin: 20rpx; }
 .wallet-hint { margin: 20rpx 24rpx; color: #888; font-size: 20rpx; line-height: 1.5; }
 .money-section { padding: 26rpx 24rpx; background: #fff; min-height: 70vh; }
+.withdraw-section { background: #f6f6f6; padding: 18rpx 20rpx 42rpx; }
+.withdraw-group { background: #fff; padding: 20rpx 22rpx; margin-bottom: 16rpx; }
+.withdraw-group .subhead { margin: 0; }
+.withdraw-group .input-label { margin-top: 22rpx; }
+.withdraw-submit { margin: 28rpx 4rpx 0; }
 .money-actions { display: flex; gap: 14rpx; margin: 8rpx 16rpx 18rpx; }
 .money-action { flex: 1; min-width: 0; padding: 0 6rpx; font-size: 23rpx; }
 .account-row { background: #fff; border-bottom: 1rpx solid #e2e8e4; padding: 22rpx 4rpx; }

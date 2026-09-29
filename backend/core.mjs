@@ -25,20 +25,20 @@ export function loadConfig(env) {
     try {
         url = new URL(base);
     } catch {
-        throw new DemoError("CONFIG", "请在本机后端的私有配置中设置测试服务地址。", 503);
+        throw new DemoError("CONFIG", "请在本机后端的私有配置中设置服务地址。", 503);
     }
     const localHttp = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
     if ((url.protocol !== "https:" && !localHttp) || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
-        throw new DemoError("CONFIG", "测试服务地址须为 HTTPS 站点根地址，或本机回环地址的 HTTP 开发服务。", 503);
+        throw new DemoError("CONFIG", "服务地址须为 HTTPS 站点根地址，或本机回环地址的 HTTP 开发服务。", 503);
     }
     const keys = ["DEMO_APP_KEY", "DEMO_APP_SECRET", "DEMO_OPENID"];
     if (keys.some((key) => !env[key] || env[key].startsWith("replace-with-"))) {
-        throw new DemoError("CONFIG", "请配置隔离测试身份及应用凭证。", 503);
+        throw new DemoError("CONFIG", "请配置获授权的成员身份及应用凭证。", 503);
     }
     const organizationId = Number(env.DEMO_ORGANIZATION_ID);
     const teamId = Number(env.DEMO_TEAM_ID);
     if (![organizationId, teamId].every((n) => Number.isSafeInteger(n) && n > 0)) {
-        throw new DemoError("CONFIG", "请配置正整数的测试组织与 Team ID。", 503);
+        throw new DemoError("CONFIG", "请配置正整数的组织与 Team ID。", 503);
     }
     return {
         base: url.origin,
@@ -157,7 +157,7 @@ function upstreamError(errors, isLogin) {
     const codes = errors.map((item) => item?.extensions?.code).filter((code) => typeof code === "string");
     const expired = codes.some((code) => /AUTH|TOKEN|UNAUTH|FORBIDDEN|JWT/i.test(code));
     if (expired && !isLogin) return new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
-    if (isLogin) return new DemoError("LOGIN_FAILED", "测试身份或应用凭证无效，请检查本机后端的私有配置与测试环境授权。", 401);
+    if (isLogin) return new DemoError("LOGIN_FAILED", "成员身份或应用凭证无效，请检查本机后端的私有配置与授权。", 401);
     if (codes.includes("CONFLICT")) return new DemoError("CONFLICT", "账号已登记或相同金额的提现正在处理中，请刷新后核对记录。", 409);
     if (codes.includes("BAD_USER_INPUT")) return new DemoError("INPUT", "请检查金额、余额和收款账号信息。", 400);
     const reason = errors.find((item) => typeof item?.extensions?.reasonCode === "string")?.extensions?.reasonCode;
@@ -190,18 +190,18 @@ export function createDemo(config, fetchImpl = fetch) {
             });
         } catch {
             if (action === "withdraw") throw uncertainWithdrawal();
-            throw new DemoError("NETWORK", "无法连接测试服务，请检查地址或网络。", 502);
+            throw new DemoError("NETWORK", "无法连接服务，请检查地址或网络。", 502);
         }
         let result;
         try {
             result = await response.json();
         } catch {
             if (action === "withdraw") throw uncertainWithdrawal();
-            throw new DemoError("UPSTREAM", "测试服务返回了非 JSON 内容。", 502);
+            throw new DemoError("UPSTREAM", "服务返回了非 JSON 内容。", 502);
         }
         if (Array.isArray(result.errors) && result.errors.length) {
             if (action === "wallet" && result.errors.some((item) => /AUTH|TOKEN|UNAUTH|FORBIDDEN|JWT/i.test(item?.extensions?.code ?? ""))) {
-                throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机测试应用配置。", 502);
+                throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机应用配置。", 502);
             }
             const error = upstreamError(result.errors, action === "login");
             throw action === "withdraw" && error.code === "UPSTREAM" ? uncertainWithdrawal() : error;
@@ -211,7 +211,7 @@ export function createDemo(config, fetchImpl = fetch) {
                 throw new DemoError("SESSION_EXPIRED", "成员会话已失效，请重新登录。", 401);
             }
             if (action === "wallet" && [401, 403].includes(response.status)) {
-                throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机测试应用配置。", 502);
+                throw new DemoError("UPSTREAM", "收益统计接口授权失败，请核对本机应用配置。", 502);
             }
             if (action === "withdraw") throw uncertainWithdrawal();
             throw upstreamError([], action === "login" && [401, 403].includes(response.status));
@@ -219,15 +219,15 @@ export function createDemo(config, fetchImpl = fetch) {
         const data = result?.data?.[action === "login" ? "login" : operation.field];
         if (data === undefined || data === null) {
             if (action === "withdraw") throw uncertainWithdrawal();
-            throw new DemoError("UPSTREAM", "测试服务响应缺少所需字段。", 502);
+            throw new DemoError("UPSTREAM", "服务响应缺少所需字段。", 502);
         }
         return data;
     }
 
     async function login(previous) {
         if (previous) sessions.delete(previous);
-        // Production must obtain an OpenID from the partner's trusted login service.
-        // This fixed isolated test OpenID must never be used for real users.
+        // This local demo uses the configured member's OpenID.
+        // User-facing integrations must obtain each user's OpenID from a trusted login service.
         const variables = { openid: config.openid, organizationId: config.organizationId, teamId: config.teamId };
         const result = await call("login", variables);
         if (typeof result.token !== "string" || !result.token || !Number.isSafeInteger(result.memberId)) {

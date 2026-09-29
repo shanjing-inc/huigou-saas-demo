@@ -1,8 +1,20 @@
-# 隔离环境请求示例
+# 签名与请求示例
 
-仅在获得目标环境及测试身份授权后执行。通过 Demo 根目录的本机 `.env` 管理 `DEMO_API_BASE_URL`、`DEMO_APP_KEY`、`DEMO_APP_SECRET`、`DEMO_OPENID`、`DEMO_ORGANIZATION_ID`、`DEMO_TEAM_ID`；`.env` 已忽略，不要写入仓库。实际惠购 Saas 版 Schema 以目标环境 GraphiQL 为准：浏览器打开 `<目标站点>/api/graphql/application` 和 `<目标站点>/api/graphql/member`，查看 Docs/Explorer；生产调试页 `/test/service-graphiql` 不开放。对两个端点只发送 `__schema` / `__type` 的自省查询可不带凭证，但业务调用必须签名或带 JWT。
+先按[接入说明](guide.md)确认目标环境、接口字段和授权范围。
 
-下例只演示 `login` 和 `getProfile` 的**标量**变量签名。在可信本机后端执行；示例代码不打印 Token、Secret 或完整响应。可将其保存为本机临时脚本，使用 Node.js 20+ 的 `node --env-file=.env <脚本>` 执行。**不要**把 Secret 放在浏览器、小程序或已提交脚本中。
+## 应用签名
+
+仅签最终发送的 `variables`，不签 query、时间戳或路径。标量（字符串、数字等）变量的规则：
+
+1. 去掉 `null`、`undefined` 和空字符串，保留 `0`、`false`。
+2. 按字段名升序排列，以 `&` 连接 `key=value`，末尾直接追加 Secret。
+3. 对 UTF-8 字符串算 MD5，取 32 位小写十六进制作为 `x-signature`。
+
+请求头还需 `x-app-key` 和 `x-timestamp`（当前 Unix 秒，有效窗口 ±300 秒，无 nonce）。Secret 不发送。变量含对象或数组时，需向对接人确认复杂变量的规范化规则，不能直接套用下面的标量示例。
+
+## 登录并读取资料
+
+将下例保存为本机临时 `.mjs` 文件，使用 Node.js ≥ 20.11 执行 `node --env-file=.env <脚本.mjs>`。配置项见 Demo 的 `.env.example`；使用已配置的正式服务及授权身份，不打印凭证或完整响应。
 
 ```js
 import { createHash } from "node:crypto";
@@ -20,7 +32,7 @@ const variables = {
     teamId: Number(process.env.DEMO_TEAM_ID),
 };
 if (!variables.openid || !Number.isSafeInteger(variables.organizationId) || !Number.isSafeInteger(variables.teamId) || variables.organizationId <= 0 || variables.teamId <= 0 || !process.env.DEMO_APP_KEY || !process.env.DEMO_APP_SECRET) {
-    throw new Error("Authorized isolated test configuration is required");
+    throw new Error("Authorized member and application configuration is required");
 }
 const canonical = Object.keys(variables).sort().map((key) => `${key}=${variables[key]}`).join("&");
 const signature = createHash("md5").update(canonical + process.env.DEMO_APP_SECRET, "utf8").digest("hex");
@@ -54,4 +66,4 @@ if (login.login.memberId !== profile.getProfile.memberId) throw new Error("Membe
 console.log({ memberId: profile.getProfile.memberId, teamId: profile.getProfile.teamId });
 ```
 
-发送其他业务请求之前先查该环境 Schema，按当前字段签名与授权范围构造请求。**如果 variables 含数组/对象**，使用惠购 Saas 版 `src/rebate/application-signature.ts` 的规范化规则（对象键递归排序、空值过滤并稳定 JSON 序列化），不要将上面的标量示例或 Demo 的 `sign` 直接扩展到复杂变量。正式对接不能使用 Demo 的固定 OpenID 获取真实用户 Token。
+其他接口沿用同一鉴权方式，参数和返回字段按目标环境文档选择。

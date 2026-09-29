@@ -5,13 +5,15 @@ import { test } from "node:test";
 
 function mountPage(request, setClipboardData = () => {}, showModal = () => {}) {
     let definition;
+    const app = { globalData: { session: "local-test-session" } };
     runInNewContext(readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8"), {
         Page: (value) => { definition = value; },
-        getApp: () => ({ globalData: { session: "local-test-session" } }),
+        getApp: () => app,
         wx: { request, setClipboardData, showModal },
     });
     return {
         ...definition,
+        app,
         data: { ...definition.data, connected: true },
         setData(patch) { Object.assign(this.data, patch); },
     };
@@ -28,28 +30,67 @@ test("order and wallet views display only supported source metrics", () => {
     assert.match(markup, /stat\.orderCount/);
     assert.match(markup, /stat\.estimateMemberOrderCommission/);
     assert.match(markup, /stat\.settledMemberOrderCommission/);
+    assert.match(markup, /good\.displayItemPrice/);
+    assert.match(markup, /item\.displayRebate/);
+    assert.doesNotMatch(markup, /toggleOrderDetail|order-details|order-detail-toggle|item\.expanded/);
 });
 
-test("status check can recover after the backend starts", () => {
+test("opening the page automatically logs in when the backend starts, without a manual connection", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.connected = false;
+    assert.equal(page.data.backendChecked, false);
     page.onShow();
+    page.onShow();
+    assert.equal(requests.length, 1);
     assert.equal(requests[0].url, "http://127.0.0.1:8787/api/status");
     assert.equal(page.data.checkingBackend, true);
     requests[0].fail();
     requests[0].complete();
     assert.equal(page.data.backendReachable, false);
     assert.match(page.data.error, /无法访问本机后端/);
+    assert.equal(requests.length, 1);
 
     page.checkBackend();
     requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[1].complete();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/login");
+    requests[2].success({ statusCode: 200, data: { session: "new-session", profile: { memberId: 7 } } });
+    await flush();
     assert.equal(page.data.backendReachable, true);
     assert.equal(page.data.configured, true);
     assert.equal(page.data.backendSupportsAccounts, true);
     assert.equal(page.data.checkingBackend, false);
+    assert.equal(page.data.backendChecked, true);
     assert.equal(page.data.error, "");
+    assert.equal(page.data.connected, true);
+    assert.equal(page.data.profile.memberId, 7);
+    assert.equal(page.app.globalData.session, "new-session");
+    page.onShow();
+    requests[3].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[3].complete();
+    assert.equal(requests.length, 4);
+});
+
+test("failed automatic login waits for a retry", async () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.connected = false;
+    page.onShow();
+    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[0].complete();
+    requests[1].success({ statusCode: 401, data: { code: "LOGIN_FAILED", message: "身份配置无效" } });
+    await flush();
+    assert.equal(page.data.connected, false);
+    assert.match(page.data.error, /身份配置无效/);
+    assert.equal(requests.length, 2);
+    page.checkBackend();
+    requests[2].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[2].complete();
+    requests[3].success({ statusCode: 200, data: { session: "retry-session", profile: { memberId: 42 } } });
+    await flush();
+    assert.equal(page.data.connected, true);
+    assert.equal(page.data.profile.memberId, 42);
 });
 
 test("old backend status blocks account page and recovers after a restart", async () => {
@@ -57,7 +98,7 @@ test("old backend status blocks account page and recovers after a restart", asyn
     const page = mountPage((options) => requests.push(options));
     page.data.connected = false;
     page.checkBackend();
-    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, mode: "real-test-only" } });
+    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, mode: "live" } });
     requests[0].complete();
     assert.equal(page.data.backendSupportsAccounts, false);
     assert.match(page.data.error, /旧版 Demo 后端/);
@@ -70,6 +111,7 @@ test("old backend status blocks account page and recovers after a restart", asyn
     requests[1].complete();
     assert.equal(page.data.backendSupportsAccounts, true);
     assert.equal(page.data.error, "");
+    page.data.mode = "withdraw";
     page.openAccounts();
     assert.equal(requests[2].url, "http://127.0.0.1:8787/api/accounts");
     requests[2].success({ statusCode: 200, data: { data: [] } });
@@ -80,11 +122,12 @@ test("missing account route suggests restarting the local backend", async () => 
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.backendSupportsAccounts = true;
+    page.data.mode = "withdraw";
     page.openAccounts();
     requests[0].success({ statusCode: 404, data: { code: "NOT_FOUND", message: "接口不存在。" } });
     await flush();
     assert.equal(page.data.backendSupportsAccounts, false);
-    assert.match(page.data.error, /重启后端并重新连接/);
+    assert.match(page.data.error, /重启后端并重试加载/);
 });
 
 test("status check rejects a different local service", () => {
@@ -196,17 +239,17 @@ test("stale detail and image responses cannot overwrite a new parse or a disconn
     assert.equal(page.data.candidates[0].preview.title, "最新商品");
     page.candidateImageError({ currentTarget: { dataset: { index: 0, version: page.data.candidates[0].version, image: "https://img.example/new.jpg" } } });
     assert.equal(page.data.candidates[0].imageFailed, true);
-    page.disconnect();
-    await flush();
+    page.clearSession();
     assert.equal(page.data.candidates.length, 0);
 });
 
-test("orders display only returned details and distinguish pending from settled rebates", async () => {
+test("orders show real summary amounts without redundant decimal zeros or expandable details", async () => {
     const copied = [];
     const page = mountPage((options) => options.success({ statusCode: 200, data: { data: { hasMore: false, items: [
         { id: 1, orderSn: "JD-123", platform: "jd", status: 2, settleStatus: 1, paidAmount: "90.00", rebateMoney: "4.9400", refundMoney: "0.00", orderedAt: "2026-09-01", expectedSettleAt: "2026-10-26", detail: { payPrice: "100.00", goods: [ { itemTitle: "商品一", itemPrice: "100.00", itemNum: "1", imageUrl: "https://img.example/a.jpg" } ] } },
         { id: 2, orderSn: "TB-456", platform: "taobao", status: -1, settleStatus: -1, paidAmount: "0.00", rebateMoney: "0.0000", refundMoney: "0.00", detail: null },
         { id: 3, orderSn: "PDD-789", platform: "pdd", status: 4, settleStatus: 3, paidAmount: "8.00", rebateMoney: "1.0000", refundMoney: "0", detail: { goods: [] } },
+        { id: 4, orderSn: "1688-001", platform: "alibaba", status: 2, settleStatus: 1, paidAmount: "24.0000", rebateMoney: "0.0300", detail: { goods: [{ itemTitle: "甲", itemPrice: "12.3400" }, { itemTitle: "乙", itemPrice: "0.0010" }] } },
     ] } } }), (value) => copied.push(value.data));
     page.data.mode = "orders";
     page.loadRecords(1);
@@ -215,16 +258,25 @@ test("orders display only returned details and distinguish pending from settled 
     assert.equal(page.data.records[0].statusLabel, "已付款");
     assert.equal(page.data.records[0].settleLabel, "预计返");
     assert.equal(page.data.records[0].goods[0].itemTitle, "商品一");
-    assert.equal(page.data.records[0].displayPrice, "100.00");
+    assert.equal(page.data.records[0].displayPrice, "100");
+    assert.equal(page.data.records[0].displayRebate, "4.94");
+    assert.equal(page.data.records[0].goods[0].displayItemPrice, "100");
+    assert.equal(page.data.records[0].detail.payPrice, "100.00");
     assert.equal(page.data.records[0].orderDate, "2026-09-01");
     assert.equal(page.data.records[0].rebateDate, "2026-10-26");
     assert.equal(page.data.records[0].platformMark, "京");
     assert.equal(page.data.records[1].goods.length, 0);
-    assert.equal(page.data.records[1].displayPrice, "0.00");
+    assert.equal(page.data.records[1].displayPrice, "0");
+    assert.equal(page.data.records[1].displayRebate, "0");
     assert.equal(page.data.records[1].rebateDate, "");
     assert.equal(page.data.records[1].hasRebate, false);
     assert.equal(page.data.records[1].statusLabel, "已关闭");
     assert.equal(page.data.records[2].settleLabel, "已结清返利");
+    assert.equal(page.data.records[2].displayPrice, "8");
+    assert.equal(page.data.records[2].displayRebate, "1");
+    assert.equal(page.data.records[3].displayPrice, "24");
+    assert.equal(page.data.records[3].displayRebate, "0.03");
+    assert.deepEqual(Array.from(page.data.records[3].goods, (good) => good.displayItemPrice), ["12.34", "0.001"]);
     page.copyOrderSn({ currentTarget: { dataset: { id: 1 } } });
     assert.deepEqual(copied, ["JD-123"]);
     page.orderImageError({ currentTarget: { dataset: { id: 1, index: 0, image: "https://img.example/stale.jpg" } } });
@@ -233,14 +285,13 @@ test("orders display only returned details and distinguish pending from settled 
     assert.equal(page.data.records[0].goods[0].imageFailed, true);
     page.copyOrderSn({ currentTarget: { dataset: { id: 99 } } });
     assert.equal(copied.length, 1);
-    page.toggleOrderDetail({ currentTarget: { dataset: { id: 1 } } });
-    assert.equal(page.data.records[0].expanded, true);
-    assert.equal(page.data.records[1].expanded, false);
+    assert.equal("toggleOrderDetail" in page, false);
+    assert.equal("expanded" in page.data.records[0], false);
     page.backToProfile();
     assert.equal(page.data.mode, "profile");
 });
 
-test("wallet switches periods, paginates only real buckets, and opens withdrawal history", async () => {
+test("wallet switches periods, paginates only real buckets, and history stays in the home tabs", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.profile = { memberId: 99, money: "1.00", pendingMoney: "2.00", withdrawalMoney: "3.00" };
@@ -270,6 +321,49 @@ test("wallet switches periods, paginates only real buckets, and opens withdrawal
     await flush();
 });
 
+test("wallet withdrawal opens account management only through withdrawal and preserves entered amount", async () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const wallet = markup.split('<view wx:elif="{{mode === \'wallet\'}}"')[1].split('<view wx:elif="{{mode === \'accounts\'}}"')[0];
+    assert.match(markup, /data-mode="withdrawals" bindtap="changeTab">提现记录<\/view>/);
+    assert.match(wallet, /bindtap="openWithdrawal">去提现/);
+    assert.doesNotMatch(wallet, /提现记录 ›|bindtap="openAccounts"|<button[^>]*>申请提现<\/button>/);
+    const withdrawal = markup.split('<view wx:elif="{{mode === \'withdraw\'}}"')[1].split('<view wx:elif="{{mode === \'promote\'}}"')[0];
+    assert.match(withdrawal, /bindtap="openAccounts">管理收款账号/);
+    assert.ok(withdrawal.indexOf("管理收款账号") < withdrawal.indexOf("提现金额（元）"));
+
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.backendSupportsAccounts = true;
+    page.data.mode = "wallet";
+    page.openAccounts();
+    assert.equal(page.data.mode, "wallet");
+    assert.equal(requests.length, 0);
+    page.openWithdrawal();
+    assert.equal(page.data.mode, "withdraw");
+    requests[0].success({ statusCode: 200, data: { data: [{ id: 7, type: 1, isDefault: true }] } });
+    await flush();
+    requests[1].success({ statusCode: 200, data: { data: { money: "10.00" } } });
+    await flush();
+    page.updateWithdrawalAmount({ detail: { value: "3.50" } });
+    page.openAccounts();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/accounts");
+    requests[2].success({ statusCode: 200, data: { data: [{ id: 8, type: 2, isDefault: true }] } });
+    await flush();
+    page.backToProfile();
+    assert.equal(page.data.mode, "withdraw");
+    assert.equal(page.data.withdrawalAmount, "3.50");
+    assert.equal(requests[3].url, "http://127.0.0.1:8787/api/accounts");
+    requests[3].success({ statusCode: 200, data: { data: [{ id: 8, type: 2, isDefault: true }] } });
+    await flush();
+    requests[4].success({ statusCode: 200, data: { data: { money: "10.00" } } });
+    await flush();
+    assert.equal(page.data.withdrawalAccountId, 8);
+    assert.equal(requests.every((request) => !["/api/withdraw", "/api/createAccount", "/api/updateAccount"].some((path) => request.url.endsWith(path))), true);
+    page.backToProfile();
+    assert.equal(page.data.mode, "wallet");
+    assert.equal(page.data.withdrawalAmount, "");
+});
+
 test("wallet session expiration clears balances and statistics", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
@@ -285,14 +379,34 @@ test("wallet session expiration clears balances and statistics", async () => {
     assert.equal(page.data.connected, false);
     assert.equal(page.data.profile, null);
     assert.equal(page.data.walletStats.length, 0);
+    assert.equal(page.app.globalData.session, "");
     assert.match(page.data.error, /会话已失效/);
+
+    page.onShow();
+    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[1].complete();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/login");
+    requests[2].success({ statusCode: 200, data: { session: "restored-session", profile: { memberId: 99, money: "50.00" } } });
+    await flush();
+    assert.equal(requests[3].url, "http://127.0.0.1:8787/api/wallet");
+    requests[3].success({ statusCode: 200, data: { data: { profile: { memberId: 99, money: "50.00" }, items: [], hasMore: false } } });
+    await flush();
+    assert.equal(page.data.connected, true);
+    assert.equal(page.data.walletLoaded, true);
+});
+
+test("startup offers retry, not connect or disconnect controls", () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.match(markup, /正在加载成员资料/);
+    assert.match(markup, /bindtap="checkBackend">重试加载/);
+    assert.doesNotMatch(markup, /bindtap="connect"|bindtap="disconnect"/);
 });
 
 test("account management lists masked accounts and edits via fixed routes", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options), () => {}, (options) => options.success({ confirm: true }));
     page.data.backendSupportsAccounts = true;
-    page.data.mode = "wallet";
+    page.data.mode = "withdraw";
     page.openAccounts();
     assert.equal(requests[0].url, "http://127.0.0.1:8787/api/accounts");
     requests[0].success({ statusCode: 200, data: { data: [{ id: 7, type: 3, name: "测***", account: "****1234", isDefault: true }] } });

@@ -15,8 +15,14 @@ function datePart(value) {
     return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "";
 }
 
+function displayAmount(value) {
+    if (value == null) return value;
+    const text = String(value).trim();
+    return /^-?\d+\.\d+$/.test(text) ? text.replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : text;
+}
+
 function orderRecord(item) {
-    const goods = Array.isArray(item.detail?.goods) ? item.detail.goods.filter(Boolean).map((good) => ({ ...good, imageFailed: false })) : [];
+    const goods = Array.isArray(item.detail?.goods) ? item.detail.goods.filter(Boolean).map((good) => ({ ...good, displayItemPrice: displayAmount(good.itemPrice), imageFailed: false })) : [];
     return {
         ...item,
         goods,
@@ -25,12 +31,11 @@ function orderRecord(item) {
         statusLabel: orderLabels[item.status] || "状态待确认",
         settleLabel: item.settleStatus === 1 ? "预计返" : item.settleStatus === 3 ? "已结清返利" : item.settleStatus === -1 ? "返利无效" : "返利信息暂无",
         hasRebate: item.settleStatus === 1 || item.settleStatus === 3,
-        hasRefund: Number(item.refundMoney) > 0,
-        displayPrice: item.detail?.payPrice ?? item.paidAmount ?? null,
+        displayPrice: displayAmount(item.detail?.payPrice ?? item.paidAmount),
+        displayRebate: displayAmount(item.rebateMoney),
         orderDate: datePart(item.orderedAt),
         confirmDate: datePart(item.confirmedAt),
         rebateDate: datePart(item.settleStatus === 3 ? item.settledAt : item.settleStatus === 1 ? item.expectedSettleAt : null),
-        expanded: false,
     };
 }
 
@@ -41,6 +46,7 @@ Page({
         configured: false,
         backendSupportsAccounts: false,
         backendReachable: false,
+        backendChecked: false,
         checkingBackend: false,
         mode: "profile",
         connected: false,
@@ -59,7 +65,6 @@ Page({
         editingAccountId: null,
         clearIdentity: false,
         accountForm: emptyAccountForm(),
-        accountsReturnMode: "wallet",
         withdrawalAmount: "",
         withdrawalAccountId: null,
         content: "",
@@ -80,29 +85,43 @@ Page({
     },
 
     checkBackend() {
-        if (this.data.checkingBackend) return;
+        if (this.data.checkingBackend || this.data.busy) return;
         this.setData({ checkingBackend: true });
         wx.request({
             url: `${BASE}/api/status`,
             success: ({ statusCode, data }) => {
                 const backendReachable = statusCode === 200 && data?.demo === true;
                 const backendSupportsAccounts = backendReachable && data.supportsAccountManagement === true;
+                const configured = backendReachable && Boolean(data.configured);
+                if (!backendReachable || !configured) this.clearSession();
                 this.setData({
                     backendReachable,
-                    configured: backendReachable && Boolean(data.configured),
+                    configured,
                     backendSupportsAccounts,
                     error: !backendReachable ? "本机端口未返回 Demo 后端状态，请检查服务和端口。"
-                        : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重新连接。" : "",
+                        : !configured ? "本机后端尚未配置，请检查 .env 并重启后端。"
+                            : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
+                });
+                if (configured && backendSupportsAccounts && !this.data.connected) void this.connect();
+            },
+            fail: () => {
+                this.clearSession();
+                this.setData({
+                    backendReachable: false,
+                    configured: false,
+                    backendSupportsAccounts: false,
+                    error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
                 });
             },
-            fail: () => this.setData({
-                backendReachable: false,
-                configured: false,
-                backendSupportsAccounts: false,
-                error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
-            }),
-            complete: () => this.setData({ checkingBackend: false }),
+            complete: () => this.setData({ checkingBackend: false, backendChecked: true }),
         });
+    },
+
+    clearSession() {
+        this.invalidateCandidates();
+        getApp().globalData.session = "";
+        this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
+            accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
     },
 
     api(action, data = {}) {
@@ -119,13 +138,10 @@ Page({
                     if (statusCode >= 200 && statusCode < 300) return resolve(body);
                     if (statusCode === 404 && body?.code === "NOT_FOUND" && ["accounts", "createAccount", "updateAccount", "deleteAccount", "withdraw"].includes(action)) {
                         this.setData({ backendSupportsAccounts: false });
-                        return reject(new Error("运行中的 Demo 后端版本过旧，请重启后端并重新连接。"));
+                        return reject(new Error("运行中的 Demo 后端版本过旧，请重启后端并重试加载。"));
                     }
                     if (body?.code === "SESSION_EXPIRED") {
-                        this.invalidateCandidates();
-                        getApp().globalData.session = "";
-                        this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
-                            accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
+                        this.clearSession();
                     }
                     reject(new Error(body?.message || "服务请求失败，请检查本机后端。"));
                 },
@@ -147,6 +163,7 @@ Page({
     },
 
     connect() {
+        if (this.data.connected || this.data.busy) return;
         this.run(async () => {
             const result = await this.api("login");
             this.invalidateCandidates();
@@ -159,19 +176,6 @@ Page({
             });
         }).then(() => {
             if (this.data.connected && this.data.mode === "wallet") this.loadWallet(1);
-        });
-    },
-
-    disconnect() {
-        this.invalidateCandidates();
-        this.run(async () => {
-            try {
-                await this.api("logout");
-            } finally {
-                getApp().globalData.session = "";
-                this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, candidates: [], selected: null, selectedIndex: -1, item: null, link: null, records: [], loaded: false,
-                    accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
-            }
         });
     },
 
@@ -189,14 +193,15 @@ Page({
 
     backToProfile() {
         if (this.data.busy) return;
-        const mode = this.data.mode === "accounts" ? this.data.accountsReturnMode : this.data.mode === "withdraw" ? "wallet" : "profile";
-        this.setData({ mode, error: "", notice: "", accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "" });
+        const mode = this.data.mode === "accounts" ? "withdraw" : this.data.mode === "withdraw" ? "wallet" : "profile";
+        this.setData({ mode, error: "", notice: "", accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false,
+            ...(mode !== "withdraw" ? { withdrawalAmount: "" } : {}) });
         if (mode === "withdraw") this.loadAccounts(true);
     },
 
     openAccounts() {
-        if (this.data.busy || !this.data.connected || !this.data.backendSupportsAccounts) return;
-        this.setData({ mode: "accounts", accountsReturnMode: this.data.mode === "withdraw" ? "withdraw" : "wallet", error: "", notice: "", accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false });
+        if (this.data.busy || !this.data.connected || !this.data.backendSupportsAccounts || this.data.mode !== "withdraw") return;
+        this.setData({ mode: "accounts", error: "", notice: "", accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false });
         this.loadAccounts();
     },
 
@@ -322,7 +327,7 @@ Page({
             return;
         }
         this.confirmingWithdrawal = true;
-        wx.showModal({ title: "确认申请提现", content: `从隔离测试成员余额申请提现 ¥${amount} 至 ${account.typeLabel} ${account.account}？提交后将占用可用余额。`, success: ({ confirm }) => {
+        wx.showModal({ title: "确认申请提现", content: `从当前成员余额申请提现 ¥${amount} 至 ${account.typeLabel} ${account.account}？提交后将占用实际可用余额。`, success: ({ confirm }) => {
             this.confirmingWithdrawal = false;
             if (!confirm || this.data.busy || this.data.mode !== "withdraw" || !this.data.connected) return;
             this.setData({ withdrawalAmount: "" });
@@ -347,12 +352,6 @@ Page({
         if (this.data.mode === "withdraw" && this.data.connected) {
             this.setData({ accounts: accounts.map((item) => ({ ...item, typeLabel: accountLabels[item.type] })) });
         }
-    },
-
-    toggleOrderDetail(event) {
-        const id = event.currentTarget.dataset.id;
-        if (this.data.mode !== "orders") return;
-        this.setData({ records: this.data.records.map((item) => String(item.id) === String(id) ? { ...item, expanded: !item.expanded } : item) });
     },
 
     changeWalletPeriod(event) {
@@ -452,7 +451,7 @@ Page({
                 imageFailed: false,
                 version,
             }));
-            this.setData({ candidates: cards, selected: null, selectedIndex: -1, item: null, link: null, notice: cards.length ? "请选择要推广的候选内容。" : "上游没有返回可用候选，请换一条有效测试物料。" });
+            this.setData({ candidates: cards, selected: null, selectedIndex: -1, item: null, link: null, notice: cards.length ? "请选择要推广的候选内容。" : "上游没有返回可用候选，请换一条有效分享内容。" });
             void this.enrichCandidates(version, cards);
         });
     },
@@ -505,7 +504,7 @@ Page({
             const selected = this.selection();
             if (!selected) throw new Error("请先解析并选择一条有效候选物料。");
             const link = (await this.api("link", selected)).data;
-            this.setData({ link, notice: "真实测试接口已返回转链；这不代表已产生订单。" });
+            this.setData({ link, notice: "已生成推广链接；这不代表已产生订单。" });
         });
     },
 
