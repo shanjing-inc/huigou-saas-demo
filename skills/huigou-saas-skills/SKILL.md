@@ -5,7 +5,7 @@ description: 接入惠购 Saas 版 GraphQL API，查询接口文档、实现签�
 
 # 惠购 Saas 版接入
 
-按任务读取随 skill 一起提供的文档，无需访问服务端源码：
+按任务查阅：
 
 - [接入说明](https://github.com/shanjing-inc/huigou-saas-demo/blob/master/README.md)：接入入口和在线 GraphQL 文档的打开方法。
 - [业务规则](references/business.md)：组织、Team、成员身份、Token、余额及提现流程。首次接入时读。

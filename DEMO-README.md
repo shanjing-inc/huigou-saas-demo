@@ -57,10 +57,8 @@ DEMO_LAN_HOST=192.168.1.10
 
 登录、商品或资金接口报错时，按[接口错误处理](skills/huigou-saas-skills/references/errors.md)排查。
 
-## 开发与文档维护
+## 开发与复用
 
 `pnpm test` 运行离线模拟测试，不请求正式服务。真实联调按已授权范围验证并记录结果；离线通过不代表接口已联通。
-
-文档分工：本文件维护 Demo 启动和排障；[README.md](README.md) 维护接入说明；[capabilities.md](skills/huigou-saas-skills/references/capabilities.md) 维护功能与接口导航；[SKILL.md](skills/huigou-saas-skills/SKILL.md) 给 AI 阅读入口和执行要求。签名与接口错误各自只在引用文件中维护。
 
 复用小程序时，复制整个 `miniprogram/packages/rebate/` 到目标小程序同名目录，在目标 `app.json` 的 `subPackages` 中添加 `{ "root": "packages/rebate", "pages": ["pages/index/index"] }`，从主包用 `wx.navigateTo({ url: "/packages/rebate/pages/index/index" })` 打开。子包内包含业务页、图标和页面样式，不依赖 Demo 主包或全局会话；默认请求本机 Demo 后端，正式集成需改为你自己的后端地址、实际用户认证和生产 HTTPS 合法域名。不要将应用密钥放在小程序端。

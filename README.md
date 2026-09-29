@@ -29,7 +29,7 @@
 
 浏览器访问上述地址，可直接进入网页版 Yoga GraphiQL 浏览接口。也可以使用 Chrome 插件 [Altair GraphQL Client](https://chromewebstore.google.com/detail/altair-graphql-client/flnheeellpciglgpaodhkhmapeljopja) 导入查看。
 
-按需要阅读，每类内容只在一处维护：
+按需要阅读：
 
 - [功能与接口](skills/huigou-saas-skills/references/capabilities.md)：全部外部接口及调用身份。
 - [业务规则](skills/huigou-saas-skills/references/business.md)：组织、Team、成员、余额和提现流程。
@@ -37,7 +37,7 @@
 - [业务调用示例](skills/huigou-saas-skills/references/examples.md)：商品转链、分页、收益统计和提现处理。
 - [错误处理](skills/huigou-saas-skills/references/errors.md) / [商品样例](skills/huigou-saas-skills/references/test-materials.md)：排错与联调。
 
-这里说明接入方法；完整参数、返回字段及枚举以在线 Schema 为准。Demo 只演示其中一部分功能。
+完整参数、返回字段及枚举请查阅在线 Schema。
 
 ## 让 AI 帮你开发
 
