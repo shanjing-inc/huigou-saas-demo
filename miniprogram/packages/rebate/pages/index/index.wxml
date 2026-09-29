@@ -1,0 +1,190 @@
+<view class="shell showcase-shell {{mode === 'promote' || mode === 'orders' || mode === 'profile' ? 'root-shell' : ''}}">
+    <view class="app-nav" style="padding-top: {{statusBarHeight}}px">
+        <view wx:if="{{mode !== 'promote' && mode !== 'orders' && mode !== 'profile'}}" class="nav-back" role="button" aria-label="返回上级页面" bindtap="backToProfile">‹</view>
+        <text class="nav-title">{{mode === 'promote' ? '惠购网' : mode === 'orders' ? '我的订单' : mode === 'profile' ? '我的' : mode === 'wallet' ? '我的钱包' : mode === 'accounts' ? '收款账号' : mode === 'withdraw' ? '申请提现' : mode === 'bills' ? '金额明细' : '提现记录'}}</text>
+    </view>
+    <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
+    <view wx:if="{{notice}}" class="notice">{{notice}}</view>
+
+    <view wx:if="{{!connected}}" class="section connection-section">
+        <view wx:if="{{!backendChecked || checkingBackend || busy}}" class="empty">正在加载成员资料…</view>
+        <button wx:else class="quiet" bindtap="checkBackend">重试加载</button>
+    </view>
+
+    <block wx:else>
+        <view wx:if="{{mode === 'profile'}}" class="profile-page">
+            <view class="member-identity"><view class="member-avatar">惠</view><view class="member-name"><text>成员 #{{profile.memberId}}</text><text class="member-meta">{{profile.role || '当前成员'}} · 惠购 DEMO</text></view></view>
+            <view class="member-balance" role="button" aria-label="查看我的钱包" data-mode="wallet" bindtap="changeTab">
+                <view class="member-balance-head"><text>我的钱包</text><text>查看钱包 ›</text></view>
+                <view class="member-balance-values"><view><text class="balance-value">{{profile.money != null ? profile.displayMoney : '—'}}</text><text class="balance-label">可用余额 (元)</text></view><view><text class="balance-value">{{profile.pendingMoney != null ? profile.displayPendingMoney : '—'}}</text><text class="balance-label">待结算及提现中 (元)</text></view></view>
+            </view>
+            <view class="member-links">
+                <view class="member-link" role="button" data-mode="wallet" bindtap="changeTab"><text class="member-link-icon">¥</text><text>钱包与收益</text><text class="link-arrow">›</text></view>
+                <view class="member-link" role="button" data-mode="bills" bindtap="changeTab"><text class="member-link-icon">≡</text><text>金额明细</text><text class="link-arrow">›</text></view>
+                <view class="member-link" role="button" data-mode="withdrawals" bindtap="changeTab"><text class="member-link-icon">↗</text><text>提现记录</text><text class="link-arrow">›</text></view>
+            </view>
+            <view class="member-details"><view class="member-details-title">成员资料</view><view class="stat"><text>成员 ID</text><text>{{profile.memberId}}</text></view><view class="stat"><text>Team ID</text><text>{{profile.teamId}}</text></view><view class="stat"><text>角色</text><text>{{profile.role}}</text></view><view class="stat"><text>累计提现</text><text>¥ {{profile.displayWithdrawalMoney}}</text></view></view>
+        </view>
+
+        <view wx:elif="{{mode === 'wallet'}}" class="wallet-section">
+            <view class="wallet-balance">
+                <view class="wallet-balance-label">可用余额 (元)</view>
+                <view class="wallet-balance-main"><text class="wallet-amount">{{walletLoaded ? profile.displayMoney : '—'}}</text><button class="wallet-withdraw" disabled="{{busy || !walletLoaded || !backendSupportsAccounts}}" bindtap="openWithdrawal">去提现 ›</button></view>
+                <view class="wallet-summary">
+                    <view><text>已提现金额</text><text class="wallet-summary-value">{{walletLoaded ? profile.displayWithdrawalMoney : '—'}}</text></view>
+                    <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.displayPendingMoney : '—'}}</text></view>
+                </view>
+            </view>
+            <view wx:if="{{backendReachable && !backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重试加载。</view>
+            <button wx:if="{{!backendSupportsAccounts}}" class="quiet wallet-more" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重试加载</button>
+            <view class="wallet-periods">
+                <view class="wallet-period {{walletPeriod === 'day' ? 'selected' : ''}}" data-period="day" bindtap="changeWalletPeriod">按天查看</view>
+                <view class="wallet-period {{walletPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="changeWalletPeriod">按月查看</view>
+                <view class="wallet-period {{walletPeriod === 'year' ? 'selected' : ''}}" data-period="year" bindtap="changeWalletPeriod">按年查看</view>
+            </view>
+            <view class="wallet-data-note"><text>仅显示有记录的时段 · {{walletPeriod === 'day' ? '近30个业务日' : '近366个业务日'}}</text><text class="wallet-refresh" role="button" bindtap="refreshWallet">刷新</text></view>
+            <view wx:if="{{busy && !walletLoaded}}" class="empty">正在读取成员收益…</view>
+            <view wx:elif="{{walletLoaded && !walletStats.length}}" class="empty">该时段暂无收益记录</view>
+            <view wx:for="{{walletStats}}" wx:for-item="stat" wx:key="date" class="wallet-stat-row">
+                <view class="wallet-stat-top"><text>{{stat.date}} 收益</text><text>{{stat.orderCount}} 笔订单</text></view>
+                <view class="wallet-stat-values">
+                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增预估返利</text><text class="wallet-stat-value">¥{{stat.displayEstimateMemberOrderCommission}}</text></view>
+                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增已结算返利</text><text class="wallet-stat-value">¥{{stat.displaySettledMemberOrderCommission}}</text></view>
+                </view>
+            </view>
+            <button wx:if="{{walletHasMore}}" class="quiet wallet-more" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载更早时段</button>
+            <view class="wallet-hint">待结算包含提现中金额；申请提现后请在记录中核对处理状态。</view>
+        </view>
+
+        <view wx:elif="{{mode === 'accounts'}}" class="money-section">
+            <view class="section-head">收款账号</view>
+            <view class="hint">仅展示脱敏账号。首个账号自动设为默认，提现成功提交后所选账号成为默认。</view>
+            <view wx:if="{{busy && !accountsLoaded}}" class="empty">正在读取收款账号…</view>
+            <view wx:elif="{{accountsLoaded && !accounts.length}}" class="empty">尚未登记收款账号</view>
+            <view wx:for="{{accounts}}" wx:for-item="account" wx:key="id" class="account-row">
+                <view class="account-main"><text class="account-kind">{{account.typeLabel}} <text wx:if="{{account.isDefault}}" class="default-tag">默认</text></text><text class="account-number">{{account.account}}</text></view>
+                <view class="account-owner">收款人：{{account.name}}</view>
+                <view class="account-controls"><button class="account-control" size="mini" disabled="{{busy}}" data-id="{{account.id}}" bindtap="showEditAccount">修改资料</button><button class="account-control danger" size="mini" disabled="{{busy}}" data-id="{{account.id}}" bindtap="deleteAccount">删除</button></view>
+            </view>
+            <button wx:if="{{!accountFormMode}}" class="primary" disabled="{{busy}}" bindtap="showCreateAccount">登记新账号</button>
+            <view wx:if="{{accountFormMode}}" class="account-form">
+                <view class="subhead">{{accountFormMode === 'create' ? '登记收款账号' : '修改收款人资料'}}</view>
+                <view wx:if="{{accountFormMode === 'create'}}" class="type-row">
+                    <view class="type {{accountForm.type === 1 ? 'selected' : ''}}" role="button" data-type="1" bindtap="setAccountType">支付宝</view>
+                    <view class="type {{accountForm.type === 2 ? 'selected' : ''}}" role="button" data-type="2" bindtap="setAccountType">微信</view>
+                    <view class="type {{accountForm.type === 3 ? 'selected' : ''}}" role="button" data-type="3" bindtap="setAccountType">银行卡</view>
+                </view>
+                <view class="input-label">{{accountFormMode === 'edit' ? '新收款人姓名（留空不修改）' : '收款人姓名或公司名称'}}</view>
+                <input class="money-input" maxlength="60" value="{{accountForm.name}}" placeholder="请输入真实姓名或公司名称" data-field="name" bindinput="updateAccountField" />
+                <block wx:if="{{accountFormMode === 'create'}}">
+                    <view class="input-label">{{accountForm.type === 1 ? '支付宝手机号或邮箱' : accountForm.type === 2 ? '微信 OpenID' : '银行卡号'}}</view>
+                    <input class="money-input" maxlength="255" value="{{accountForm.account}}" placeholder="请输入收款账号" data-field="account" bindinput="updateAccountField" />
+                    <block wx:if="{{accountForm.type === 3}}"><view class="input-label">开户行（选填）</view><input class="money-input" maxlength="255" value="{{accountForm.bankName}}" placeholder="请输入开户行" data-field="bankName" bindinput="updateAccountField" /></block>
+                </block>
+                <view class="input-label">{{accountFormMode === 'edit' ? '新证件号码（留空不修改）' : '证件号码（选填）'}}</view>
+                <input class="money-input" maxlength="30" disabled="{{clearIdentity}}" value="{{accountForm.identificationCode}}" placeholder="身份证号或统一社会信用代码" data-field="identificationCode" bindinput="updateAccountField" />
+                <view wx:if="{{accountFormMode === 'edit'}}" class="clear-identity" role="button" bindtap="toggleClearIdentity">{{clearIdentity ? '✓ 清空已有证件号码' : '○ 清空已有证件号码'}}</view>
+                <view wx:if="{{accountFormMode === 'edit'}}" class="hint">账号或开户行不可修改；更换时先登记新账号，再删除旧账号。</view>
+                <view class="money-actions"><button class="money-action quiet" disabled="{{busy}}" bindtap="cancelAccountForm">取消</button><button class="money-action primary" disabled="{{busy}}" loading="{{busy}}" bindtap="saveAccount">保存</button></view>
+            </view>
+        </view>
+
+        <view wx:elif="{{mode === 'withdraw'}}" class="money-section withdraw-section">
+            <view class="withdraw-group">
+                <view class="withdraw-account-head"><text class="subhead">收款账号</text><text class="wallet-refresh" role="button" bindtap="openAccounts">管理收款账号 ›</text></view>
+                <view wx:if="{{busy && !accountsLoaded}}" class="empty">正在读取收款账号…</view>
+                <view wx:elif="{{accountsLoaded && !accounts.length}}" class="empty">请先登记收款账号</view>
+                <view wx:for="{{accounts}}" wx:for-item="account" wx:key="id" class="account-row selectable {{withdrawalAccountId === account.id ? 'chosen' : ''}}" role="button" data-id="{{account.id}}" bindtap="selectWithdrawalAccount">
+                    <view class="account-main"><text>{{account.typeLabel}} <text wx:if="{{account.isDefault}}" class="default-tag">默认</text></text><text>{{account.account}}</text></view>
+                    <view class="account-owner">{{account.name}} <text wx:if="{{withdrawalAccountId === account.id}}" class="selected-account">已选中 ✓</text></view>
+                </view>
+            </view>
+            <view class="withdraw-group">
+                <view class="withdraw-balance"><text>可用余额</text><text>¥ {{profile.displayMoney}}</text></view>
+                <view class="input-label">提现金额（元）</view>
+                <input class="money-input" type="digit" maxlength="13" value="{{withdrawalAmount}}" placeholder="最低 1.00 元，最多两位小数" bindinput="updateWithdrawalAmount" />
+            </view>
+            <button class="primary withdraw-submit" disabled="{{busy || !accountsLoaded || !accounts.length || !withdrawalAmount}}" loading="{{busy}}" bindtap="submitWithdrawal">确认提现信息</button>
+            <view class="wallet-hint">提交会占用当前成员的实际可用余额；如刷新失败，请先核对提现记录，勿重复提交。</view>
+        </view>
+
+        <view wx:elif="{{mode === 'promote'}}" class="section shopping-section">
+            <view class="shopping-search">
+                <view class="shopping-steps">
+                    <view class="shopping-step"><text class="step-number">1</text><text>复制商品链接</text></view>
+                    <view class="shopping-step"><text class="step-number">2</text><text>粘贴商品链接</text></view>
+                    <view class="shopping-step"><text class="step-number">3</text><text>解析商品</text></view>
+                </view>
+                <view class="shopping-platforms">支持淘宝、京东、拼多多、唯品会、抖音、1688 等商品链接</view>
+                <textarea class="material-input" maxlength="4096" placeholder="粘贴分享文案或商品链接" value="{{content}}" bindinput="updateContent" />
+                <button class="primary" loading="{{busy}}" disabled="{{busy || !content}}" bindtap="parse">解析商品</button>
+            </view>
+            <view wx:if="{{candidates.length}}" class="subhead">解析结果 · {{candidates.length}}</view>
+            <view wx:for="{{candidates}}" wx:key="index" class="candidate {{selectedIndex === index ? 'chosen' : ''}} {{busy ? 'disabled' : ''}}" role="button" aria-label="转链 {{item.preview.title || item.detail.itemTitle || '解析结果'}}" data-index="{{index}}" bindtap="selectCandidate">
+                <view class="candidate-photo">
+                    <image wx:if="{{item.preview.imageUrl && !item.imageFailed}}" src="{{item.preview.imageUrl}}" mode="aspectFill" lazy-load="true" data-index="{{index}}" data-version="{{item.version}}" data-image="{{item.preview.imageUrl}}" binderror="candidateImageError" />
+                    <view wx:else class="photo-fallback">暂无图片</view>
+                </view>
+                <view class="candidate-body">
+                    <view class="candidate-title">{{item.preview.title || item.detail.itemTitle || (item.type === 'goods' || item.type === 'life' ? '商品信息待补充' : '解析结果')}}</view>
+                    <view wx:if="{{item.preview.price || item.preview.coupon}}" class="candidate-offer">
+                        <text wx:if="{{item.preview.price}}" class="candidate-price">¥{{item.preview.price}}</text>
+                        <text wx:if="{{item.preview.coupon}}" class="candidate-coupon">{{item.preview.coupon}} 元券</text>
+                    </view>
+                    <view wx:elif="{{item.previewState === 'ready'}}" class="candidate-missing">价格未提供</view>
+                    <view wx:if="{{item.preview.rebate}}" class="candidate-rebate">再返 ¥{{item.preview.rebate}}</view>
+                    <view class="candidate-bottom">
+                        <text class="candidate-shop">{{item.preview.shopName || item.platform}}</text>
+                        <text wx:if="{{item.previewState === 'loading'}}" class="candidate-state">详情加载中</text>
+                        <text wx:elif="{{item.previewState === 'unavailable'}}" class="candidate-state">详情暂不可用</text>
+                        <text wx:elif="{{item.previewState === 'unsupported'}}" class="candidate-state">非商品物料</text>
+                    </view>
+                </view>
+            </view>
+        </view>
+
+        <view wx:else class="section {{mode === 'orders' ? 'orders-section' : 'money-records'}}">
+            <view wx:if="{{busy && !loaded}}" class="empty">正在读取记录…</view>
+            <view wx:elif="{{loaded && !records.length}}" class="empty">{{mode === 'orders' ? '暂无订单记录，转链成功不会立即产生订单。' : mode === 'bills' ? '暂无金额明细' : '暂无提现记录'}}</view>
+            <view wx:for="{{records}}" wx:key="id" class="record {{mode === 'orders' ? 'order-record' : 'money-record'}}">
+                <block wx:if="{{mode === 'orders'}}">
+                    <view class="order-head">
+                        <view class="order-ident"><text class="order-platform">{{item.platformMark}}</text><text class="order-number">订单号：{{item.orderSn || '未提供'}}</text><text class="order-platform-name">{{item.platformLabel}}</text></view>
+                        <view class="copy-order {{!item.orderSn ? 'disabled' : ''}}" role="button" aria-label="复制单号" aria-disabled="{{!item.orderSn}}" data-id="{{item.id}}" bindtap="copyOrderSn"><text class="copy-order-text">复制单号</text></view>
+                    </view>
+                    <view wx:if="{{item.detail.invalidReason}}" class="order-reason">{{item.detail.invalidReason}}</view>
+                    <view wx:if="{{item.goods.length}}" class="order-goods">
+                        <view wx:for="{{item.goods}}" wx:for-item="good" wx:for-index="goodIndex" wx:key="index" class="order-good">
+                            <view class="order-photo">
+                                <image wx:if="{{good.imageUrl && !good.imageFailed}}" src="{{good.imageUrl}}" mode="aspectFill" lazy-load="true" data-id="{{item.id}}" data-index="{{goodIndex}}" data-image="{{good.imageUrl}}" binderror="orderImageError" />
+                                <view wx:else class="photo-fallback">暂无图片</view>
+                            </view>
+                            <view class="order-good-info">
+                                <view class="order-title"><text class="order-state {{item.status === -1 || item.status === -2 ? 'closed' : ''}}">{{item.statusLabel}}</text>{{good.itemTitle || '商品名称暂缺'}}</view>
+                                <view class="order-good-meta"><text class="order-price">{{item.goods.length > 1 ? (good.displayItemPrice != null ? '单价 ¥ ' + good.displayItemPrice : '单价暂缺') : (item.displayPrice != null ? '¥ ' + item.displayPrice : '金额暂缺')}}</text><text wx:if="{{item.hasRebate && goodIndex === 0}}" class="order-rebate"><text class="order-rebate-tag">{{item.goods.length > 1 ? '整单' : ''}}{{item.settleStatus === 1 ? '预计返' : '返'}}</text> {{item.displayRebate != null ? item.displayRebate : '—'}}</text><text wx:elif="{{!item.hasRebate && goodIndex === 0}}" class="order-settle-note">{{item.settleLabel}}</text></view>
+                            </view>
+                        </view>
+                    </view>
+                    <view wx:else class="order-missing">商品明细暂未提供 · {{item.statusLabel}}</view>
+                    <view class="order-times"><text>下单{{item.confirmDate ? '/收货' : ''}}{{item.rebateDate ? (item.settleStatus === 1 ? '/预计结算' : '/已结算') : ''}}时间：{{item.orderDate || '—'}}{{item.confirmDate ? '/' + item.confirmDate : ''}}{{item.rebateDate ? '/' + item.rebateDate : ''}}</text></view>
+                </block>
+                <block wx:elif="{{mode === 'bills'}}">
+                    <view class="record-row money-record-head"><text class="money-record-title">{{item.title}}</text><text class="money-record-amount {{item.decrease ? 'decrease' : ''}}">{{item.displayAmount}}<text class="money-unit"> 元</text></text></view>
+                    <view class="money-record-meta">时间：{{item.createdAt}}</view>
+                    <view wx:if="{{item.memo}}" class="money-record-meta">备注：{{item.memo}}</view>
+                </block>
+                <block wx:else>
+                    <view class="record-row money-record-head"><text class="money-record-amount">{{item.displayAmount}}<text class="money-unit"> 元</text></text><text class="withdraw-status {{item.statusTone}}">{{item.statusLabel}}</text></view>
+                    <view class="record-row money-record-sub"><text>{{item.accountLabel}}{{item.withdrawalAccountId ? ' · 账号 #' + item.withdrawalAccountId : ''}}</text><text>{{item.createdAt}}</text></view>
+                    <view wx:if="{{item.failureReason}}" class="withdraw-reason">失败原因：{{item.failureReason}}</view>
+                </block>
+            </view>
+            <button wx:if="{{hasMore}}" class="quiet" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载下一页</button>
+        </view>
+    </block>
+    <view wx:if="{{mode === 'promote' || mode === 'orders' || mode === 'profile'}}" class="bottom-nav">
+        <view class="bottom-tab {{mode === 'promote' ? 'active' : ''}}" role="button" aria-label="网购" data-mode="promote" bindtap="changeTab"><image src="../../images/tab-shop{{mode === 'promote' ? '-active' : ''}}.svg" /><text>网购</text></view>
+        <view class="bottom-tab {{mode === 'orders' ? 'active' : ''}}" role="button" aria-label="订单" data-mode="orders" bindtap="changeTab"><image src="../../images/tab-orders{{mode === 'orders' ? '-active' : ''}}.svg" /><text>订单</text></view>
+        <view class="bottom-tab {{mode === 'profile' ? 'active' : ''}}" role="button" aria-label="我的" data-mode="profile" bindtap="changeTab"><image src="../../images/tab-profile{{mode === 'profile' ? '-active' : ''}}.svg" /><text>我的</text></view>
+    </view>
+</view>

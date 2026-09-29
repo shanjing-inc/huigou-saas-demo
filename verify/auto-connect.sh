@@ -10,7 +10,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-wechatide -c Codex simulator_open_page --project "$project" --page pages/index/index > "$result"
+wechatide -c Codex simulator_open_page --project "$project" --page packages/rebate/pages/index/index > "$result"
 jq -e '.ok and .result.success' "$result" > /dev/null
 
 wechatide -c Codex automation_page_action --project "$project" --action getData --data-path connected --wait-for-selector .stat > "$result"

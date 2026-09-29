@@ -27,7 +27,7 @@ async function show(mode, records, file) {
     await ide("simulator_screenshot", "--path", `${project}/verify/${file}.jpg`, "--wait-for-selector", ".money-record");
 }
 
-await ide("simulator_open_page", "--page", "pages/index/index");
+await ide("simulator_open_page", "--page", "packages/rebate/pages/index/index");
 await show("bills", [
     { id: 1, title: "网购返利", displayAmount: "+18.44", decrease: false, createdAt: "2026-09-25 13:29", memo: "京东订单：3577447017489129" },
     { id: 2, title: "邀请奖励", displayAmount: "+0.1", decrease: false, createdAt: "2026-09-26 18:11", memo: "推荐奖金" },

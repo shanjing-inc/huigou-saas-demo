@@ -16,7 +16,7 @@ async function ide(tool, ...args) {
     return response.result;
 }
 
-await ide("simulator_open_page", "--page", "pages/index/index");
+await ide("simulator_open_page", "--page", "packages/rebate/pages/index/index");
 await ide("automation_page_action", "--action", "getData", "--data-path", "mode", "--wait-for-selector", ".shell");
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     connected: true, mode: "wallet", loaded: true, walletLoaded: true,

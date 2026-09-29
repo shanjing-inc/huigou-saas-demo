@@ -1,1 +1,1 @@
-App({ globalData: { session: "" } });
+App({});

@@ -18,7 +18,7 @@ async function ide(tool, ...args) {
 }
 
 await ide("simulator_refresh");
-await ide("simulator_open_page", "--page", "pages/index/index");
+await ide("simulator_open_page", "--page", "packages/rebate/pages/index/index");
 const hint = await ide("automation_element_action", "--action", "text", "--selector", ".hint", "--wait-for-selector", ".hint");
 assert.match(hint, /本机后端/);
 assert.doesNotMatch(hint, /BFF/i);
