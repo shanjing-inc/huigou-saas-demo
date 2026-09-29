@@ -189,23 +189,12 @@
                             </view>
                             <view class="order-good-info">
                                 <view class="order-title"><text class="order-state {{item.status === -1 || item.status === -2 ? 'closed' : ''}}">{{item.statusLabel}}</text>{{good.itemTitle || '商品名称暂缺'}}</view>
-                                <view class="order-good-meta"><text class="order-price">{{item.goods.length > 1 ? (good.itemPrice != null ? '单价 ¥ ' + good.itemPrice : '单价暂缺') : (item.displayPrice !== null ? '¥ ' + item.displayPrice : '金额暂缺')}}</text><text wx:if="{{item.hasRebate && goodIndex === 0}}" class="order-rebate"><text class="order-rebate-tag">{{item.goods.length > 1 ? '整单' : ''}}{{item.settleStatus === 1 ? '预计返' : '返'}}</text> {{item.rebateMoney != null ? item.rebateMoney : '—'}}</text><text wx:elif="{{!item.hasRebate && goodIndex === 0}}" class="order-settle-note">{{item.settleLabel}}</text></view>
+                                <view class="order-good-meta"><text class="order-price">{{item.goods.length > 1 ? (good.displayItemPrice != null ? '单价 ¥ ' + good.displayItemPrice : '单价暂缺') : (item.displayPrice != null ? '¥ ' + item.displayPrice : '金额暂缺')}}</text><text wx:if="{{item.hasRebate && goodIndex === 0}}" class="order-rebate"><text class="order-rebate-tag">{{item.goods.length > 1 ? '整单' : ''}}{{item.settleStatus === 1 ? '预计返' : '返'}}</text> {{item.displayRebate != null ? item.displayRebate : '—'}}</text><text wx:elif="{{!item.hasRebate && goodIndex === 0}}" class="order-settle-note">{{item.settleLabel}}</text></view>
                             </view>
                         </view>
                     </view>
                     <view wx:else class="order-missing">商品明细暂未提供 · {{item.statusLabel}}</view>
-                    <view class="order-times"><text>下单{{item.confirmDate ? '/收货' : ''}}{{item.rebateDate ? (item.settleStatus === 1 ? '/预计结算' : '/已结算') : ''}}时间：{{item.orderDate || '—'}}{{item.confirmDate ? '/' + item.confirmDate : ''}}{{item.rebateDate ? '/' + item.rebateDate : ''}}</text><text class="order-detail-toggle" role="button" data-id="{{item.id}}" bindtap="toggleOrderDetail">{{item.expanded ? '收起' : '详情'}}⌄</text></view>
-                    <view wx:if="{{item.expanded}}" class="order-details">
-                        <view wx:if="{{item.detail.payPrice}}">实付金额 ¥{{item.detail.payPrice}}</view>
-                        <view wx:if="{{item.paidAmount}}">计佣金额 ¥{{item.paidAmount}}</view>
-                        <view wx:if="{{item.hasRefund}}">累计退款 ¥{{item.refundMoney}}</view>
-                        <view wx:for="{{item.goods}}" wx:for-item="good" wx:key="index"><text wx:if="{{good.itemPrice}}">单价 ¥{{good.itemPrice}}　</text><text wx:if="{{good.itemNum}}">数量 ×{{good.itemNum}}</text></view>
-                        <view wx:if="{{item.paidAt}}">付款 {{item.paidAt}}</view>
-                        <view wx:if="{{item.confirmedAt}}">收货 {{item.confirmedAt}}</view>
-                        <view wx:if="{{item.closedAt}}">关闭 {{item.closedAt}}</view>
-                        <view wx:if="{{item.settleStatus === 1 && item.expectedSettleAt}}">预计结算 {{item.expectedSettleAt}}</view>
-                        <view wx:if="{{item.settleStatus === 3 && item.settledAt}}">返利结清 {{item.settledAt}}</view>
-                    </view>
+                    <view class="order-times"><text>下单{{item.confirmDate ? '/收货' : ''}}{{item.rebateDate ? (item.settleStatus === 1 ? '/预计结算' : '/已结算') : ''}}时间：{{item.orderDate || '—'}}{{item.confirmDate ? '/' + item.confirmDate : ''}}{{item.rebateDate ? '/' + item.rebateDate : ''}}</text></view>
                 </block>
                 <block wx:elif="{{mode === 'bills'}}">
                     <view class="record-row"><text class="strong">账单 #{{item.id}}</text><text>¥ {{item.amount}}</text></view>

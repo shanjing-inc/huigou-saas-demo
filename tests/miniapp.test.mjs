@@ -28,6 +28,9 @@ test("order and wallet views display only supported source metrics", () => {
     assert.match(markup, /stat\.orderCount/);
     assert.match(markup, /stat\.estimateMemberOrderCommission/);
     assert.match(markup, /stat\.settledMemberOrderCommission/);
+    assert.match(markup, /good\.displayItemPrice/);
+    assert.match(markup, /item\.displayRebate/);
+    assert.doesNotMatch(markup, /toggleOrderDetail|order-details|order-detail-toggle|item\.expanded/);
 });
 
 test("status check can recover after the backend starts", () => {
@@ -201,12 +204,13 @@ test("stale detail and image responses cannot overwrite a new parse or a disconn
     assert.equal(page.data.candidates.length, 0);
 });
 
-test("orders display only returned details and distinguish pending from settled rebates", async () => {
+test("orders show real summary amounts without redundant decimal zeros or expandable details", async () => {
     const copied = [];
     const page = mountPage((options) => options.success({ statusCode: 200, data: { data: { hasMore: false, items: [
         { id: 1, orderSn: "JD-123", platform: "jd", status: 2, settleStatus: 1, paidAmount: "90.00", rebateMoney: "4.9400", refundMoney: "0.00", orderedAt: "2026-09-01", expectedSettleAt: "2026-10-26", detail: { payPrice: "100.00", goods: [ { itemTitle: "商品一", itemPrice: "100.00", itemNum: "1", imageUrl: "https://img.example/a.jpg" } ] } },
         { id: 2, orderSn: "TB-456", platform: "taobao", status: -1, settleStatus: -1, paidAmount: "0.00", rebateMoney: "0.0000", refundMoney: "0.00", detail: null },
         { id: 3, orderSn: "PDD-789", platform: "pdd", status: 4, settleStatus: 3, paidAmount: "8.00", rebateMoney: "1.0000", refundMoney: "0", detail: { goods: [] } },
+        { id: 4, orderSn: "1688-001", platform: "alibaba", status: 2, settleStatus: 1, paidAmount: "24.0000", rebateMoney: "0.0300", detail: { goods: [{ itemTitle: "甲", itemPrice: "12.3400" }, { itemTitle: "乙", itemPrice: "0.0010" }] } },
     ] } } }), (value) => copied.push(value.data));
     page.data.mode = "orders";
     page.loadRecords(1);
@@ -215,16 +219,25 @@ test("orders display only returned details and distinguish pending from settled 
     assert.equal(page.data.records[0].statusLabel, "已付款");
     assert.equal(page.data.records[0].settleLabel, "预计返");
     assert.equal(page.data.records[0].goods[0].itemTitle, "商品一");
-    assert.equal(page.data.records[0].displayPrice, "100.00");
+    assert.equal(page.data.records[0].displayPrice, "100");
+    assert.equal(page.data.records[0].displayRebate, "4.94");
+    assert.equal(page.data.records[0].goods[0].displayItemPrice, "100");
+    assert.equal(page.data.records[0].detail.payPrice, "100.00");
     assert.equal(page.data.records[0].orderDate, "2026-09-01");
     assert.equal(page.data.records[0].rebateDate, "2026-10-26");
     assert.equal(page.data.records[0].platformMark, "京");
     assert.equal(page.data.records[1].goods.length, 0);
-    assert.equal(page.data.records[1].displayPrice, "0.00");
+    assert.equal(page.data.records[1].displayPrice, "0");
+    assert.equal(page.data.records[1].displayRebate, "0");
     assert.equal(page.data.records[1].rebateDate, "");
     assert.equal(page.data.records[1].hasRebate, false);
     assert.equal(page.data.records[1].statusLabel, "已关闭");
     assert.equal(page.data.records[2].settleLabel, "已结清返利");
+    assert.equal(page.data.records[2].displayPrice, "8");
+    assert.equal(page.data.records[2].displayRebate, "1");
+    assert.equal(page.data.records[3].displayPrice, "24");
+    assert.equal(page.data.records[3].displayRebate, "0.03");
+    assert.deepEqual(Array.from(page.data.records[3].goods, (good) => good.displayItemPrice), ["12.34", "0.001"]);
     page.copyOrderSn({ currentTarget: { dataset: { id: 1 } } });
     assert.deepEqual(copied, ["JD-123"]);
     page.orderImageError({ currentTarget: { dataset: { id: 1, index: 0, image: "https://img.example/stale.jpg" } } });
@@ -233,9 +246,8 @@ test("orders display only returned details and distinguish pending from settled 
     assert.equal(page.data.records[0].goods[0].imageFailed, true);
     page.copyOrderSn({ currentTarget: { dataset: { id: 99 } } });
     assert.equal(copied.length, 1);
-    page.toggleOrderDetail({ currentTarget: { dataset: { id: 1 } } });
-    assert.equal(page.data.records[0].expanded, true);
-    assert.equal(page.data.records[1].expanded, false);
+    assert.equal("toggleOrderDetail" in page, false);
+    assert.equal("expanded" in page.data.records[0], false);
     page.backToProfile();
     assert.equal(page.data.mode, "profile");
 });
