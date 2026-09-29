@@ -1,4 +1,5 @@
-const BASE = "http://127.0.0.1:8787";
+// For phone debugging, set this to http://<computer-private-IP>:<DEMO_PORT> and recompile.
+const BACKEND_BASE = "http://127.0.0.1:8787";
 const sections = ["promote", "orders", "profile", "wallet", "bills", "withdrawals"];
 const walletPeriods = ["day", "month", "year"];
 const accountLabels = { 1: "支付宝", 2: "微信", 3: "银行卡" };
@@ -115,7 +116,7 @@ Page({
         if (this.data.checkingBackend || this.data.busy) return;
         this.setData({ checkingBackend: true });
         wx.request({
-            url: `${BASE}/api/status`,
+            url: `${BACKEND_BASE}/api/status`,
             success: ({ statusCode, data }) => {
                 const backendReachable = statusCode === 200 && data?.demo === true;
                 const backendSupportsAccounts = backendReachable && data.supportsAccountManagement === true;
@@ -125,9 +126,9 @@ Page({
                     backendReachable,
                     configured,
                     backendSupportsAccounts,
-                    error: !backendReachable ? "本机端口未返回 Demo 后端状态，请检查服务和端口。"
-                        : !configured ? "本机后端尚未配置，请检查 .env 并重启后端。"
-                            : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
+                    error: !backendReachable ? "服务未返回 Demo 后端状态，请检查服务地址和网络。"
+                        : !configured ? "后端尚未配置，请检查 .env 并重启后端。"
+                            : !backendSupportsAccounts ? "运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
                 });
                 if (configured && backendSupportsAccounts && !this.data.connected) void this.connect();
             },
@@ -137,7 +138,7 @@ Page({
                     backendReachable: false,
                     configured: false,
                     backendSupportsAccounts: false,
-                    error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
+                    error: "无法访问后端，请检查服务地址、手机网络和微信调试模式。",
                 });
             },
             complete: () => this.setData({ checkingBackend: false, backendChecked: true }),
@@ -154,7 +155,7 @@ Page({
     api(action, data = {}) {
         return new Promise((resolve, reject) => {
             wx.request({
-                url: `${BASE}/api/${action}`,
+                url: `${BACKEND_BASE}/api/${action}`,
                 method: "POST",
                 header: {
                     "content-type": "application/json",
@@ -170,9 +171,9 @@ Page({
                     if (body?.code === "SESSION_EXPIRED") {
                         this.clearSession();
                     }
-                    reject(new Error(body?.message || "服务请求失败，请检查本机后端。"));
+                    reject(new Error(body?.message || "服务请求失败，请检查后端。"));
                 },
-                fail: () => reject(new Error("无法连接本机后端；请检查端口、模拟器设置和本机网络。")),
+                fail: () => reject(new Error("无法连接后端；请检查服务地址、网络和微信调试模式。")),
             });
         });
     },

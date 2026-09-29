@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { request as httpRequest } from "node:http";
 import { after, before, test } from "node:test";
 import { createDemo, DemoError, loadConfig, sign, statisticRange } from "../backend/core.mjs";
-import { createServer } from "../backend/http.mjs";
+import { createServer, listenHost } from "../backend/http.mjs";
 
 const env = {
     DEMO_API_BASE_URL: "https://isolated.example.test",
@@ -297,6 +298,41 @@ test("status does not reveal credentials; invalid host and content type are bloc
     assert.equal(forbidden.status, 403);
     const invalid = await fetch(`${url}/api/login`, { method: "POST", body: "{}" });
     assert.equal(invalid.status, 415);
+});
+
+test("LAN debugging binds only an explicit private IPv4 and rejects foreign hosts/origins", async () => {
+    assert.equal(listenHost(env), "127.0.0.1");
+    for (const host of ["0.0.0.0", "127.0.0.1", "8.8.8.8", "192.168.1.10.evil.test", "172.32.1.1", "::1"]) {
+        assert.throws(() => listenHost({ DEMO_LAN_HOST: host }), /private IPv4/);
+    }
+    assert.throws(() => listenHost({ DEMO_LAN_TOKEN: "legacy" }), /no longer supported/);
+    assert.equal(listenHost({ DEMO_LAN_HOST: "192.168.1.10" }), "192.168.1.10");
+
+    const local = createServer({ ...env, DEMO_LAN_HOST: "192.168.1.10" }, upstream);
+    await new Promise((resolve) => local.listen(0, "127.0.0.1", resolve));
+    try {
+        const address = `http://127.0.0.1:${local.address().port}`;
+        const host = `192.168.1.10:${local.address().port}`;
+        const headers = { host };
+        const probe = (path, { method = "GET", headers = {}, body } = {}) => new Promise((resolve, reject) => {
+            const request = httpRequest(`${address}${path}`, { method, headers }, (response) => {
+                response.resume();
+                response.on("end", () => resolve(response));
+            });
+            request.on("error", reject);
+            request.end(body);
+        });
+        let response = await probe("/api/status", { headers: { ...headers, origin: "http://untrusted.test" } });
+        assert.equal(response.statusCode, 403);
+        response = await probe("/api/status", { headers });
+        assert.equal(response.statusCode, 200);
+        response = await probe("/api/login", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: "{}" });
+        assert.equal(response.statusCode, 200);
+        response = await probe("/api/status", { headers: { host: `127.0.0.1:${local.address().port}` } });
+        assert.equal(response.statusCode, 403);
+    } finally {
+        await new Promise((resolve) => local.close(resolve));
+    }
 });
 
 test("HTTP financial writes require a valid member session and work without an opt-in", async () => {

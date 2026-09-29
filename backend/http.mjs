@@ -1,6 +1,31 @@
 import http from "node:http";
 import { createDemo, DemoError, loadConfig } from "./core.mjs";
 
+function privateIPv4(value) {
+    const parts = value.split(".");
+    if (parts.length !== 4 || parts.some((part) => !/^(0|[1-9]\d{0,2})$/.test(part) || Number(part) > 255)) return false;
+    const [first, second] = parts.map(Number);
+    return first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+}
+
+export function listenHost(env) {
+    const host = env.DEMO_LAN_HOST?.trim();
+    if (env.DEMO_LAN_TOKEN) throw new Error("DEMO_LAN_TOKEN is no longer supported; remove it from .env.");
+    if (!host) {
+        return "127.0.0.1";
+    }
+    if (!privateIPv4(host)) throw new Error("DEMO_LAN_HOST must be a private IPv4 address on this computer.");
+    return host;
+}
+
+function authorized(req, host) {
+    if (req.headers.origin) return false;
+    if (req.headers.host !== `${host}:${req.socket.localPort}`) {
+        return host === "127.0.0.1" && req.headers.host === `localhost:${req.socket.localPort}`;
+    }
+    return host === "127.0.0.1" || privateIPv4(req.socket.remoteAddress ?? "") || req.socket.remoteAddress === "127.0.0.1";
+}
+
 function respond(res, status, body) {
     res.writeHead(status, {
         "content-type": "application/json; charset=utf-8",
@@ -11,6 +36,7 @@ function respond(res, status, body) {
 }
 
 export function createServer(env, fetchImpl) {
+    const host = listenHost(env);
     let demo;
     let configurationError;
     try {
@@ -20,9 +46,8 @@ export function createServer(env, fetchImpl) {
     }
 
     return http.createServer(async (req, res) => {
-        // This demo is loopback-only and does not accept browser cross-origin requests.
-        if (!/^((127\.0\.0\.1)|(localhost)):\d+$/.test(req.headers.host ?? "") || req.headers.origin) {
-            respond(res, 403, { code: "FORBIDDEN", message: "仅允许本机模拟器访问。" });
+        if (!authorized(req, host)) {
+            respond(res, 403, { code: "FORBIDDEN", message: "服务地址无效。" });
             return;
         }
         if (req.url === "/api/status" && req.method === "GET") {

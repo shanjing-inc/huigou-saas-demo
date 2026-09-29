@@ -3,7 +3,6 @@
         <view wx:if="{{mode !== 'promote' && mode !== 'orders' && mode !== 'profile'}}" class="nav-back" role="button" aria-label="返回上级页面" bindtap="backToProfile">‹</view>
         <text class="nav-title">{{mode === 'promote' ? '惠购网' : mode === 'orders' ? '我的订单' : mode === 'profile' ? '我的' : mode === 'wallet' ? '我的钱包' : mode === 'accounts' ? '收款账号' : mode === 'withdraw' ? '申请提现' : mode === 'bills' ? '金额明细' : '提现记录'}}</text>
     </view>
-
     <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
     <view wx:if="{{notice}}" class="notice">{{notice}}</view>
 
