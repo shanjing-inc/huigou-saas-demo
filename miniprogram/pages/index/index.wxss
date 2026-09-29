@@ -161,9 +161,9 @@ button::after { border: 0; }
 .bottom-tab image { width: 42rpx; height: 42rpx; }
 .shopping-section { margin: 20rpx 22rpx 0; }
 .shopping-search { padding: 20rpx 22rpx 28rpx; border-radius: 8rpx; background: #fff; }
-.shopping-steps { display: flex; justify-content: space-between; gap: 6rpx; }
-.shopping-steps > text { padding: 12rpx 6rpx; background: #fff2ed; color: #b94731; font-size: 19rpx; white-space: nowrap; }
-.step-number { display: inline-flex; align-items: center; justify-content: center; width: 32rpx; height: 32rpx; border-radius: 50%; background: #ff6247; color: #fff; font-size: 19rpx; }
+.shopping-steps { display: flex; gap: 10rpx; }
+.shopping-step { flex: 1; min-width: 0; min-height: 74rpx; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 7rpx; padding: 8rpx 6rpx; border-radius: 20rpx; background: #fff2ed; color: #b94731; font-size: 24rpx; font-weight: 500; white-space: nowrap; }
+.step-number { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 40rpx; height: 40rpx; border-radius: 50%; background: #ff6247; color: #fff; font-size: 23rpx; }
 .shopping-platforms { margin: 25rpx 2rpx 18rpx; color: #6e7378; font-size: 22rpx; line-height: 1.5; }
 .shopping-search .material-input { height: 150rpx; padding: 18rpx; border: 0; border-radius: 8rpx; background: #f6f7f8; }
 .shopping-search .primary { margin-top: 24rpx; background: #ff6247; }

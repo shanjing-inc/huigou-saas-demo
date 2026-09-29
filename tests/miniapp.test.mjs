@@ -38,6 +38,15 @@ test("order and wallet views display only supported source metrics", () => {
     assert.match(styles, /\.copy-order \{[^}]+align-items: center;[^}]+justify-content: center;/);
 });
 
+test("shopping instructions render as evenly spaced rounded steps", () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
+    assert.match(markup, /<view class="shopping-steps">\s*<view class="shopping-step"><text class="step-number">1<\/text><text>复制商品链接<\/text><\/view>/);
+    assert.equal((markup.match(/<view class="shopping-step">/g) || []).length, 3);
+    assert.match(styles, /\.shopping-step \{[^}]*flex: 1;[^}]*align-items: center;[^}]*border-radius: 20rpx;/);
+    assert.doesNotMatch(styles, /\.shopping-steps > text/);
+});
+
 test("parse screens and prompts describe results without changing candidate data", async () => {
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
     assert.match(markup, /解析结果 · {{candidates.length}}/);

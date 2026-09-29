@@ -111,7 +111,11 @@
 
         <view wx:elif="{{mode === 'promote'}}" class="section shopping-section">
             <view class="shopping-search">
-                <view class="shopping-steps"><text><text class="step-number">1</text> 复制商品链接</text><text><text class="step-number">2</text> 粘贴商品链接</text><text><text class="step-number">3</text> 解析商品</text></view>
+                <view class="shopping-steps">
+                    <view class="shopping-step"><text class="step-number">1</text><text>复制商品链接</text></view>
+                    <view class="shopping-step"><text class="step-number">2</text><text>粘贴商品链接</text></view>
+                    <view class="shopping-step"><text class="step-number">3</text><text>解析商品</text></view>
+                </view>
                 <view class="shopping-platforms">支持淘宝、京东、拼多多、唯品会、抖音、1688 等商品链接</view>
                 <textarea class="material-input" maxlength="4096" placeholder="粘贴分享文案或商品链接" value="{{content}}" bindinput="updateContent" />
                 <button class="primary" loading="{{busy}}" disabled="{{busy || !content}}" bindtap="parse">解析商品</button>
