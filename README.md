@@ -21,25 +21,25 @@
 pnpm backend
 ```
 
-保持终端打开。访问 `http://127.0.0.1:8787/api/status`，看到 `configured: true` 表示配置格式正确；下一步连接成功才表示接口可用。`pnpm dev` 与此命令相同。
+保持终端打开。访问 `http://127.0.0.1:8787/api/status`，看到 `configured: true` 表示配置格式正确；小程序自动加载成员资料后才表示接口可用。`pnpm dev` 与此命令相同。
 
 ### 3. 打开小程序
 
 在微信开发者工具中导入仓库根目录，使用自己可用的 AppID。在本地设置中关闭合法域名校验（`project.private.config.json` 的 `setting.urlCheck: false`），让模拟器能访问本机后端；不要上传这份配置。
 
-点击「连接服务」，再粘贴[商品样例链接](skills/huigou-saas-skills/references/test-materials.md)，选择候选并生成推广链接。订单和钱包页展示当前成员的实际数据，没有记录时显示空列表。
+打开页面后会自动加载当前成员，无需点击连接。随后粘贴[商品样例链接](skills/huigou-saas-skills/references/test-materials.md)，选择候选并生成推广链接。订单和钱包页展示当前成员的实际数据，没有记录时显示空列表。
 
 ## 使用时注意
 
 - 登录后，管理收款账号和申请提现即可使用，会改动当前成员的实际资料和余额；提交前核对成员、账号和金额。
 - 本机后端仅监听 `127.0.0.1`，不支持真机、公网或共享部署。固定 OpenID 只用于 Demo；正式接入应认证实际用户。密钥和成员 Token 保留在后端。
-- 改配置或更新后端后，在原终端按 `Ctrl+C` 停止，再启动并重新连接。退出 Demo 时也用 `Ctrl+C`。
+- 改配置或更新后端后，在原终端按 `Ctrl+C` 停止，再启动并重新打开小程序；若页面仍报错，点击「重试加载」。退出 Demo 时也用 `Ctrl+C`。
 
 ## 遇到问题
 
 | 现象 | 怎么处理 |
 | --- | --- |
-| 提示后端未启动 | 确认终端仍在运行，点击「重新检测本机后端」。改过 `DEMO_PORT` 时，同步修改 `miniprogram/pages/index/index.js` 的 `BASE`。 |
+| 提示后端未启动 | 确认终端仍在运行，点击「重试加载」。改过 `DEMO_PORT` 时，同步修改 `miniprogram/pages/index/index.js` 的 `BASE`。 |
 | 更新后仍是旧行为 | 停止占用 8787 端口的旧后端，再启动。状态响应应有 `supportsAccountManagement: true`。 |
 
 登录、商品或资金接口报错时，按[接口错误处理](skills/huigou-saas-skills/references/errors.md)排查。

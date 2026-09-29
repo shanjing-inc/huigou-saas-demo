@@ -41,6 +41,7 @@ Page({
         configured: false,
         backendSupportsAccounts: false,
         backendReachable: false,
+        backendChecked: false,
         checkingBackend: false,
         mode: "profile",
         connected: false,
@@ -80,29 +81,43 @@ Page({
     },
 
     checkBackend() {
-        if (this.data.checkingBackend) return;
+        if (this.data.checkingBackend || this.data.busy) return;
         this.setData({ checkingBackend: true });
         wx.request({
             url: `${BASE}/api/status`,
             success: ({ statusCode, data }) => {
                 const backendReachable = statusCode === 200 && data?.demo === true;
                 const backendSupportsAccounts = backendReachable && data.supportsAccountManagement === true;
+                const configured = backendReachable && Boolean(data.configured);
+                if (!backendReachable || !configured) this.clearSession();
                 this.setData({
                     backendReachable,
-                    configured: backendReachable && Boolean(data.configured),
+                    configured,
                     backendSupportsAccounts,
                     error: !backendReachable ? "本机端口未返回 Demo 后端状态，请检查服务和端口。"
-                        : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重新连接。" : "",
+                        : !configured ? "本机后端尚未配置，请检查 .env 并重启后端。"
+                            : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
+                });
+                if (configured && backendSupportsAccounts && !this.data.connected) void this.connect();
+            },
+            fail: () => {
+                this.clearSession();
+                this.setData({
+                    backendReachable: false,
+                    configured: false,
+                    backendSupportsAccounts: false,
+                    error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
                 });
             },
-            fail: () => this.setData({
-                backendReachable: false,
-                configured: false,
-                backendSupportsAccounts: false,
-                error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
-            }),
-            complete: () => this.setData({ checkingBackend: false }),
+            complete: () => this.setData({ checkingBackend: false, backendChecked: true }),
         });
+    },
+
+    clearSession() {
+        this.invalidateCandidates();
+        getApp().globalData.session = "";
+        this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
+            accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
     },
 
     api(action, data = {}) {
@@ -119,13 +134,10 @@ Page({
                     if (statusCode >= 200 && statusCode < 300) return resolve(body);
                     if (statusCode === 404 && body?.code === "NOT_FOUND" && ["accounts", "createAccount", "updateAccount", "deleteAccount", "withdraw"].includes(action)) {
                         this.setData({ backendSupportsAccounts: false });
-                        return reject(new Error("运行中的 Demo 后端版本过旧，请重启后端并重新连接。"));
+                        return reject(new Error("运行中的 Demo 后端版本过旧，请重启后端并重试加载。"));
                     }
                     if (body?.code === "SESSION_EXPIRED") {
-                        this.invalidateCandidates();
-                        getApp().globalData.session = "";
-                        this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, records: [], candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
-                            accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
+                        this.clearSession();
                     }
                     reject(new Error(body?.message || "服务请求失败，请检查本机后端。"));
                 },
@@ -147,6 +159,7 @@ Page({
     },
 
     connect() {
+        if (this.data.connected || this.data.busy) return;
         this.run(async () => {
             const result = await this.api("login");
             this.invalidateCandidates();
@@ -159,19 +172,6 @@ Page({
             });
         }).then(() => {
             if (this.data.connected && this.data.mode === "wallet") this.loadWallet(1);
-        });
-    },
-
-    disconnect() {
-        this.invalidateCandidates();
-        this.run(async () => {
-            try {
-                await this.api("logout");
-            } finally {
-                getApp().globalData.session = "";
-                this.setData({ connected: false, profile: null, walletStats: [], walletLoaded: false, walletHasMore: false, candidates: [], selected: null, selectedIndex: -1, item: null, link: null, records: [], loaded: false,
-                    accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null });
-            }
         });
     },
 

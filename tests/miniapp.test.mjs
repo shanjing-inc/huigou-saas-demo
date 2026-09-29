@@ -5,13 +5,15 @@ import { test } from "node:test";
 
 function mountPage(request, setClipboardData = () => {}, showModal = () => {}) {
     let definition;
+    const app = { globalData: { session: "local-test-session" } };
     runInNewContext(readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8"), {
         Page: (value) => { definition = value; },
-        getApp: () => ({ globalData: { session: "local-test-session" } }),
+        getApp: () => app,
         wx: { request, setClipboardData, showModal },
     });
     return {
         ...definition,
+        app,
         data: { ...definition.data, connected: true },
         setData(patch) { Object.assign(this.data, patch); },
     };
@@ -30,26 +32,62 @@ test("order and wallet views display only supported source metrics", () => {
     assert.match(markup, /stat\.settledMemberOrderCommission/);
 });
 
-test("status check can recover after the backend starts", () => {
+test("opening the page automatically logs in when the backend starts, without a manual connection", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.connected = false;
+    assert.equal(page.data.backendChecked, false);
     page.onShow();
+    page.onShow();
+    assert.equal(requests.length, 1);
     assert.equal(requests[0].url, "http://127.0.0.1:8787/api/status");
     assert.equal(page.data.checkingBackend, true);
     requests[0].fail();
     requests[0].complete();
     assert.equal(page.data.backendReachable, false);
     assert.match(page.data.error, /无法访问本机后端/);
+    assert.equal(requests.length, 1);
 
     page.checkBackend();
     requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[1].complete();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/login");
+    requests[2].success({ statusCode: 200, data: { session: "new-session", profile: { memberId: 7 } } });
+    await flush();
     assert.equal(page.data.backendReachable, true);
     assert.equal(page.data.configured, true);
     assert.equal(page.data.backendSupportsAccounts, true);
     assert.equal(page.data.checkingBackend, false);
+    assert.equal(page.data.backendChecked, true);
     assert.equal(page.data.error, "");
+    assert.equal(page.data.connected, true);
+    assert.equal(page.data.profile.memberId, 7);
+    assert.equal(page.app.globalData.session, "new-session");
+    page.onShow();
+    requests[3].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[3].complete();
+    assert.equal(requests.length, 4);
+});
+
+test("failed automatic login waits for a retry", async () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.connected = false;
+    page.onShow();
+    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[0].complete();
+    requests[1].success({ statusCode: 401, data: { code: "LOGIN_FAILED", message: "身份配置无效" } });
+    await flush();
+    assert.equal(page.data.connected, false);
+    assert.match(page.data.error, /身份配置无效/);
+    assert.equal(requests.length, 2);
+    page.checkBackend();
+    requests[2].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[2].complete();
+    requests[3].success({ statusCode: 200, data: { session: "retry-session", profile: { memberId: 42 } } });
+    await flush();
+    assert.equal(page.data.connected, true);
+    assert.equal(page.data.profile.memberId, 42);
 });
 
 test("old backend status blocks account page and recovers after a restart", async () => {
@@ -84,7 +122,7 @@ test("missing account route suggests restarting the local backend", async () => 
     requests[0].success({ statusCode: 404, data: { code: "NOT_FOUND", message: "接口不存在。" } });
     await flush();
     assert.equal(page.data.backendSupportsAccounts, false);
-    assert.match(page.data.error, /重启后端并重新连接/);
+    assert.match(page.data.error, /重启后端并重试加载/);
 });
 
 test("status check rejects a different local service", () => {
@@ -196,8 +234,7 @@ test("stale detail and image responses cannot overwrite a new parse or a disconn
     assert.equal(page.data.candidates[0].preview.title, "最新商品");
     page.candidateImageError({ currentTarget: { dataset: { index: 0, version: page.data.candidates[0].version, image: "https://img.example/new.jpg" } } });
     assert.equal(page.data.candidates[0].imageFailed, true);
-    page.disconnect();
-    await flush();
+    page.clearSession();
     assert.equal(page.data.candidates.length, 0);
 });
 
@@ -285,7 +322,27 @@ test("wallet session expiration clears balances and statistics", async () => {
     assert.equal(page.data.connected, false);
     assert.equal(page.data.profile, null);
     assert.equal(page.data.walletStats.length, 0);
+    assert.equal(page.app.globalData.session, "");
     assert.match(page.data.error, /会话已失效/);
+
+    page.onShow();
+    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[1].complete();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/login");
+    requests[2].success({ statusCode: 200, data: { session: "restored-session", profile: { memberId: 99, money: "50.00" } } });
+    await flush();
+    assert.equal(requests[3].url, "http://127.0.0.1:8787/api/wallet");
+    requests[3].success({ statusCode: 200, data: { data: { profile: { memberId: 99, money: "50.00" }, items: [], hasMore: false } } });
+    await flush();
+    assert.equal(page.data.connected, true);
+    assert.equal(page.data.walletLoaded, true);
+});
+
+test("startup offers retry, not connect or disconnect controls", () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.match(markup, /正在加载成员资料/);
+    assert.match(markup, /bindtap="checkBackend">重试加载/);
+    assert.doesNotMatch(markup, /bindtap="connect"|bindtap="disconnect"/);
 });
 
 test("account management lists masked accounts and edits via fixed routes", async () => {

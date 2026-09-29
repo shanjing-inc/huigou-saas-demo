@@ -5,18 +5,15 @@
     </view>
     <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="topline"><text class="mark">HUIGOU / PARTNER</text><text class="demo-tag">惠购 · DEMO</text></view>
     <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="page-title">返利联调</view>
-    <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="subtitle">连接正式服务 · 使用当前成员资料</view>
+    <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="subtitle">当前成员的推广与返利</view>
     <view wx:else class="showcase-label">惠购 · DEMO</view>
 
     <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
     <view wx:if="{{notice}}" class="notice">{{notice}}</view>
 
     <view wx:if="{{!connected}}" class="section">
-        <view class="section-head">当前成员</view>
-        <view class="hint">身份和应用凭证仅由本机后端提供；小程序不会调用微信登录。</view>
-        <view wx:if="{{backendReachable && !configured}}" class="empty">尚未配置应用凭证和成员身份。请检查本机 .env 并重启后端。</view>
-        <button wx:if="{{!configured}}" class="quiet" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重新检测本机后端</button>
-        <button class="primary" disabled="{{busy || !configured}}" loading="{{busy}}" bindtap="connect">连接服务</button>
+        <view wx:if="{{!backendChecked || checkingBackend || busy}}" class="empty">正在加载成员资料…</view>
+        <button wx:else class="quiet" bindtap="checkBackend">重试加载</button>
     </view>
 
     <block wx:else>
@@ -32,14 +29,13 @@
         </scroll-view>
 
         <view wx:if="{{mode === 'profile'}}" class="section">
-            <view class="section-head">成员资料 <text class="eyebrow">LIVE TEST</text></view>
+            <view class="section-head">成员资料</view>
             <view class="stat"><text>成员 ID</text><text>{{profile.memberId}}</text></view>
             <view class="stat"><text>Team ID</text><text>{{profile.teamId}}</text></view>
             <view class="stat"><text>角色</text><text>{{profile.role}}</text></view>
             <view class="stat"><text>可用余额</text><text>¥ {{profile.money}}</text></view>
             <view class="stat"><text>待结算</text><text>¥ {{profile.pendingMoney}}</text></view>
             <view class="stat"><text>累计提现</text><text>¥ {{profile.withdrawalMoney}}</text></view>
-            <button class="quiet" disabled="{{busy}}" bindtap="disconnect">断开会话</button>
         </view>
 
         <view wx:elif="{{mode === 'wallet'}}" class="wallet-section">
@@ -52,8 +48,8 @@
                 </view>
             </view>
             <view class="money-actions"><button class="money-action primary" disabled="{{busy || !walletLoaded || !backendSupportsAccounts}}" bindtap="openWithdrawal">申请提现</button><button class="money-action quiet" disabled="{{busy || !backendSupportsAccounts}}" bindtap="openAccounts">管理收款账号</button></view>
-            <view wx:if="{{backendReachable && !backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重新连接服务。</view>
-            <button wx:if="{{!backendSupportsAccounts}}" class="quiet wallet-more" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重新检测本机后端</button>
+            <view wx:if="{{backendReachable && !backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重试加载。</view>
+            <button wx:if="{{!backendSupportsAccounts}}" class="quiet wallet-more" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重试加载</button>
             <view class="wallet-periods">
                 <view class="wallet-period {{walletPeriod === 'day' ? 'selected' : ''}}" data-period="day" bindtap="changeWalletPeriod">按天查看</view>
                 <view class="wallet-period {{walletPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="changeWalletPeriod">按月查看</view>
