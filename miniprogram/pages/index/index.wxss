@@ -137,12 +137,9 @@ button::after { border: 0; }
 .withdraw-balance text:last-child { color: #1a4738; font-size: 35rpx; font-weight: 600; }
 .withdraw-account-head .wallet-refresh { font-size: 22rpx; }
 .showcase-shell .empty { margin: 12rpx; background: #fff; }
-.showcase-shell .footer { margin-top: 45rpx; }
-.footer { font-size: 20rpx; color: #889790; text-align: center; margin-top: 90rpx; }
 .root-shell { padding-bottom: calc(150rpx + env(safe-area-inset-bottom)); background: #f4f5f6; }
 .root-shell .app-nav { border-bottom: 1rpx solid #f0f0f0; }
 .connection-section { margin: 24rpx; }
-.root-shell .footer { margin: 42rpx 20rpx 0; }
 .bottom-nav { position: fixed; z-index: 10; bottom: 0; left: 0; right: 0; display: flex; height: 106rpx; padding-bottom: env(safe-area-inset-bottom); border-top: 1rpx solid #ededed; background: #fff; }
 .bottom-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4rpx; color: #a0a4a9; font-size: 22rpx; line-height: 1.3; }
 .bottom-tab.active { color: #4a63f4; font-weight: 600; }

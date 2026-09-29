@@ -178,7 +178,6 @@
             <button wx:if="{{hasMore}}" class="quiet" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载下一页</button>
         </view>
     </block>
-    <view class="footer">正式服务 · 账号和提现操作影响实际数据</view>
     <view wx:if="{{mode === 'promote' || mode === 'orders' || mode === 'profile'}}" class="bottom-nav">
         <view class="bottom-tab {{mode === 'promote' ? 'active' : ''}}" role="button" aria-label="网购" data-mode="promote" bindtap="changeTab"><image src="../../images/tab-shop{{mode === 'promote' ? '-active' : ''}}.svg" /><text>网购</text></view>
         <view class="bottom-tab {{mode === 'orders' ? 'active' : ''}}" role="button" aria-label="订单" data-mode="orders" bindtap="changeTab"><image src="../../images/tab-orders{{mode === 'orders' ? '-active' : ''}}.svg" /><text>订单</text></view>
