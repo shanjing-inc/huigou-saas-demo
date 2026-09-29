@@ -118,6 +118,7 @@ test("opening the page automatically logs in when the backend starts, without a 
     requests[0].complete();
     assert.equal(page.data.backendReachable, false);
     assert.match(page.data.error, /无法访问后端/);
+    assert.match(page.data.error, /127\.0\.0\.1:8787\/api\/status/);
     assert.equal(requests.length, 1);
 
     page.checkBackend();
@@ -141,6 +142,20 @@ test("opening the page automatically logs in when the backend starts, without a 
     requests[3].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[3].complete();
     assert.equal(requests.length, 4);
+});
+
+test("unconfigured loopback backend points to the LAN host setting", () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.connected = false;
+    page.onShow();
+    requests[0].success({ statusCode: 200, data: { demo: true, configured: false, supportsAccountManagement: true } });
+    requests[0].complete();
+    assert.equal(page.data.backendReachable, true);
+    assert.equal(page.data.connected, false);
+    assert.match(page.data.error, /127\.0\.0\.1:8787\/api\/status/);
+    assert.match(page.data.error, /DEMO_LAN_HOST/);
+    assert.equal(requests.length, 1);
 });
 
 test("failed automatic login waits for a retry", async () => {

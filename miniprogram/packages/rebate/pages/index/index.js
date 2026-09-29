@@ -144,8 +144,8 @@ Page({
                     backendReachable,
                     configured,
                     backendSupportsAccounts,
-                    error: !backendReachable ? "服务未返回 Demo 后端状态，请检查服务地址和网络。"
-                        : !configured ? "后端尚未配置，请检查 .env 并重启后端。"
+                    error: !backendReachable ? `当前请求 ${BACKEND_BASE}/api/status 未返回 Demo 后端状态，请检查地址和网络。`
+                        : !configured ? `当前请求 ${BACKEND_BASE}/api/status 的后端未配置；若后端启用了 DEMO_LAN_HOST，请将 BACKEND_BASE 改为同一地址并重新编译。`
                             : !backendSupportsAccounts ? "运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
                 });
                 if (configured && backendSupportsAccounts && !this.data.connected) void this.connect();
@@ -156,7 +156,7 @@ Page({
                     backendReachable: false,
                     configured: false,
                     backendSupportsAccounts: false,
-                    error: "无法访问后端，请检查服务地址、手机网络和微信调试模式。",
+                    error: `无法访问后端 ${BACKEND_BASE}/api/status，请核对后端监听地址、手机网络和微信调试模式。`,
                 });
             },
             complete: () => this.setData({ checkingBackend: false, backendChecked: true }),
