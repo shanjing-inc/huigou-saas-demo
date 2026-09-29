@@ -759,6 +759,7 @@ test("withdrawal requires account selection and user confirmation without a swit
 
 test("shopping, orders and profile are the only root tabs; profile retains the real record entries", async () => {
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.doesNotMatch(markup, /正式服务|影响实际数据|class="footer"/);
     const nav = markup.split('<view wx:if="{{mode === \'promote\' || mode === \'orders\' || mode === \'profile\'}}" class="bottom-nav">')[1];
     assert.ok(nav);
     assert.match(nav, /data-mode="promote" bindtap="changeTab"/);
