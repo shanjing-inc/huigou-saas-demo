@@ -2,7 +2,7 @@
 
 为你的应用接入商品推广、订单返利和提现功能。想先体验小程序？按 [Demo 启动说明](DEMO-README.md) 操作。
 
-生产环境域名：**https://saas.tbxzs.cn/**。接口路径见下文；不要将 App Secret 或成员 Token 放在小程序中。
+生产环境域名：https://saas.tbxzs.cn/ 。
 
 ## 能做什么
 
