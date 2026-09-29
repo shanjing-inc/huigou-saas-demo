@@ -25,16 +25,15 @@ await ide("automation_page_action", "--action", "setData", "--patch", JSON.strin
     records: [
         {
             id: 1, platformLabel: "京东", platformMark: "京", orderSn: "TEST-JD-1001", statusLabel: "已付款", status: 2,
-            settleLabel: "预计返", hasRebate: true, paidAmount: "141.00", rebateMoney: "4.9400",
-            refundMoney: "0.00", hasRefund: false, orderedAt: "2026-09-05 09:00:00", orderDate: "2026-09-05", rebateDate: "2026-10-26", displayPrice: "149.00",
+            settleLabel: "预计返", hasRebate: true, displayRebate: "4.94",
+            orderDate: "2026-09-05", rebateDate: "2026-10-26", displayPrice: "149",
             paidAt: "2026-09-05 09:02:00", expectedSettleAt: "2026-10-26 00:00:00", settleStatus: 1,
-            detail: { payPrice: "149.00" }, goods: [{ itemTitle: "无线蓝牙办公鼠标", itemPrice: "149.00", itemNum: "1", imageFailed: true }], expanded: false,
+            goods: [{ itemTitle: "无线蓝牙办公鼠标", displayItemPrice: "149", imageFailed: true }],
         },
         {
             id: 2, platformLabel: "淘宝", platformMark: "淘", orderSn: "TEST-TB-1002", statusLabel: "已关闭", status: -1,
-            settleLabel: "返利无效", hasRebate: false, paidAmount: "0.00", rebateMoney: "0.0000",
-            refundMoney: "0.00", hasRefund: false, orderedAt: "2026-09-06 10:00:00", orderDate: "2026-09-06", displayPrice: "0.00",
-            settleStatus: -1, detail: null, goods: [], expanded: false,
+            settleLabel: "返利无效", hasRebate: false, displayRebate: "0", orderDate: "2026-09-06", displayPrice: "0",
+            settleStatus: -1, goods: [],
         },
     ],
 }));

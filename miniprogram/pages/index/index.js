@@ -15,8 +15,14 @@ function datePart(value) {
     return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "";
 }
 
+function displayAmount(value) {
+    if (value == null) return value;
+    const text = String(value).trim();
+    return /^-?\d+\.\d+$/.test(text) ? text.replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : text;
+}
+
 function orderRecord(item) {
-    const goods = Array.isArray(item.detail?.goods) ? item.detail.goods.filter(Boolean).map((good) => ({ ...good, imageFailed: false })) : [];
+    const goods = Array.isArray(item.detail?.goods) ? item.detail.goods.filter(Boolean).map((good) => ({ ...good, displayItemPrice: displayAmount(good.itemPrice), imageFailed: false })) : [];
     return {
         ...item,
         goods,
@@ -25,12 +31,11 @@ function orderRecord(item) {
         statusLabel: orderLabels[item.status] || "状态待确认",
         settleLabel: item.settleStatus === 1 ? "预计返" : item.settleStatus === 3 ? "已结清返利" : item.settleStatus === -1 ? "返利无效" : "返利信息暂无",
         hasRebate: item.settleStatus === 1 || item.settleStatus === 3,
-        hasRefund: Number(item.refundMoney) > 0,
-        displayPrice: item.detail?.payPrice ?? item.paidAmount ?? null,
+        displayPrice: displayAmount(item.detail?.payPrice ?? item.paidAmount),
+        displayRebate: displayAmount(item.rebateMoney),
         orderDate: datePart(item.orderedAt),
         confirmDate: datePart(item.confirmedAt),
         rebateDate: datePart(item.settleStatus === 3 ? item.settledAt : item.settleStatus === 1 ? item.expectedSettleAt : null),
-        expanded: false,
     };
 }
 
@@ -347,12 +352,6 @@ Page({
         if (this.data.mode === "withdraw" && this.data.connected) {
             this.setData({ accounts: accounts.map((item) => ({ ...item, typeLabel: accountLabels[item.type] })) });
         }
-    },
-
-    toggleOrderDetail(event) {
-        const id = event.currentTarget.dataset.id;
-        if (this.data.mode !== "orders") return;
-        this.setData({ records: this.data.records.map((item) => String(item.id) === String(id) ? { ...item, expanded: !item.expanded } : item) });
     },
 
     changeWalletPeriod(event) {
