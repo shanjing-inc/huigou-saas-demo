@@ -3,13 +3,13 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 
-function mountPage(request, setClipboardData = () => {}, showModal = () => {}) {
+function mountPage(request, setClipboardData = () => {}, showModal = () => {}, navigateToMiniProgram) {
     let definition;
     const app = { globalData: { session: "local-test-session" } };
     runInNewContext(readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8"), {
         Page: (value) => { definition = value; },
         getApp: () => app,
-        wx: { request, setClipboardData, showModal },
+        wx: { request, setClipboardData, showModal, ...(navigateToMiniProgram ? { navigateToMiniProgram } : {}) },
     });
     return {
         ...definition,
@@ -193,11 +193,120 @@ test("item lookup uses parsed product ID while conversion keeps the candidate UR
     assert.equal(page.data.error, "");
 });
 
+test("tapping a candidate converts once and opens the mini-program before copying anything", async () => {
+    const requests = [];
+    const navigation = [];
+    const copies = [];
+    const page = mountPage((options) => requests.push(options), (options) => copies.push(options), () => {}, (options) => navigation.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("123")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, "http://127.0.0.1:8787/api/link");
+    assert.equal(requests[0].data.material, "https://example.test/123");
+    requests[0].success({ statusCode: 200, data: { data: { miniProgram: { appId: "wx123", path: "pages/goods?id=1" }, code: "￥口令￥", url: "https://example.test/link" } } });
+    await flush();
+    assert.equal(navigation.length, 1);
+    assert.equal(navigation[0].appId, "wx123");
+    assert.equal(navigation[0].path, "pages/goods?id=1");
+    navigation[0].success();
+    assert.equal(copies.length, 0);
+    assert.equal(page.data.link.code, "￥口令￥");
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.doesNotMatch(markup, /生成转链/);
+    assert.match(markup, /bindtap="selectCandidate"/);
+});
+
+test("mini-program navigation failure copies code once and prompts for the correct platform", async () => {
+    const requests = [];
+    const copied = [];
+    const dialogs = [];
+    const navigation = [];
+    const page = mountPage((options) => requests.push(options), (options) => { copied.push(options.data); options.success(); }, (options) => dialogs.push(options), (options) => navigation.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("1")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[0].success({ statusCode: 200, data: { data: { miniProgram: { appId: "wx123" }, code: "京东口令", shortUrl: "https://short.example/1" } } });
+    await flush();
+    navigation[0].fail();
+    navigation[0].fail();
+    assert.deepEqual(copied, ["京东口令"]);
+    assert.match(dialogs[0].title, /口令复制成功/);
+    assert.match(dialogs[0].content, /打开京东/);
+    assert.equal(dialogs[0].showCancel, false);
+});
+
+test("without a mini-program, code wins over URL and URL is copied when code is absent", async () => {
+    const copied = [];
+    const dialogs = [];
+    const requests = [];
+    const page = mountPage((options) => requests.push(options), (options) => { copied.push(options.data); options.success(); }, (options) => dialogs.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("1"), candidate("2")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[0].success({ statusCode: 200, data: { data: { code: "code-1", url: "https://example.test/full" } } });
+    await flush();
+    assert.deepEqual(copied, ["code-1"]);
+    page.selectCandidate({ currentTarget: { dataset: { index: 1 } } });
+    requests[1].success({ statusCode: 200, data: { data: { shortUrl: "https://example.test/short", url: "https://example.test/full" } } });
+    await flush();
+    assert.deepEqual(copied, ["code-1", "https://example.test/short"]);
+    assert.match(dialogs[1].title, /网址复制成功/);
+    assert.match(dialogs[1].content, /打开京东/);
+    page.setType({ currentTarget: { dataset: { type: "life" } } });
+    assert.equal(requests[2].data.materialType, "life");
+});
+
+test("clipboard failures show an honest error and let the user retry", async () => {
+    const requests = [];
+    const dialogs = [];
+    let failCopy = true;
+    const page = mountPage((options) => requests.push(options), (options) => failCopy ? options.fail() : options.success(), (options) => dialogs.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("1")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[0].success({ statusCode: 200, data: { data: { code: "retry-code" } } });
+    await flush();
+    assert.match(page.data.error, /口令复制失败/);
+    assert.equal(dialogs.length, 0);
+    failCopy = false;
+    page.copyCode();
+    assert.match(dialogs[0].content, /打开京东/);
+});
+
+test("stale conversion responses and clipboard callbacks cannot guide a new session", async () => {
+    const requests = [];
+    const clipboard = [];
+    const dialogs = [];
+    const page = mountPage((options) => requests.push(options), (options) => clipboard.push(options), (options) => dialogs.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("1")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    page.clearSession();
+    requests[0].success({ statusCode: 200, data: { data: { code: "old-code" } } });
+    await flush();
+    assert.equal(page.data.link, null);
+    assert.equal(clipboard.length, 0);
+
+    page.data.connected = true;
+    page.data.candidates = [candidate("2")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[1].success({ statusCode: 200, data: { data: { code: "second-code" } } });
+    await flush();
+    assert.equal(clipboard.length, 1);
+    page.clearSession();
+    clipboard[0].success();
+    assert.equal(dialogs.length, 0);
+});
+
 test("candidate cards load at most two details at once and keep failed items selectable", async () => {
     const pending = [];
     const page = mountPage((options) => {
         if (options.url.endsWith("/parse")) {
             options.success({ statusCode: 200, data: { data: [candidate("1"), candidate("2"), candidate("3"), candidate("4")] } });
+        } else if (options.url.endsWith("/link")) {
+            options.success({ statusCode: 200, data: { data: { url: "https://test.example/ref" } } });
         } else pending.push(options);
     });
     page.data.content = "share";
@@ -206,6 +315,7 @@ test("candidate cards load at most two details at once and keep failed items sel
     assert.equal(pending.length, 2);
     assert.equal(page.data.candidates[0].previewState, "loading");
     page.selectCandidate({ currentTarget: { dataset: { index: 1 } } });
+    await flush();
     assert.equal(page.data.selectedIndex, 1);
     assert.equal(page.data.candidates[0].keyContent, page.data.selected.keyContent);
 
@@ -225,6 +335,7 @@ test("candidate cards load at most two details at once and keep failed items sel
     assert.equal(page.data.candidates[0].previewState, "unavailable");
     assert.equal(pending.length, 4);
     page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    await flush();
     assert.equal(page.selection().material, "https://example.test/1");
 
     pending[2].success({ statusCode: 200, data: { data: null } });

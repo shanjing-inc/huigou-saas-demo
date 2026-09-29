@@ -452,16 +452,18 @@ Page({
                 imageFailed: false,
                 version,
             }));
-            this.setData({ candidates: cards, selected: null, selectedIndex: -1, item: null, link: null, notice: cards.length ? "请选择要推广的候选内容。" : "上游没有返回可用候选，请换一条有效分享内容。" });
+            this.setData({ candidates: cards, selected: null, selectedIndex: -1, item: null, link: null, notice: cards.length ? "点击候选内容即可转链。" : "上游没有返回可用候选，请换一条有效分享内容。" });
             void this.enrichCandidates(version, cards);
         });
     },
 
     selectCandidate(event) {
+        if (this.data.busy || !this.data.connected) return;
         const index = Number(event.currentTarget.dataset.index);
         const candidate = this.data.candidates[index];
         if (!candidate) return;
         this.setData({ selected: candidate, selectedIndex: index, selectedType: candidate.type, item: null, link: null, error: "", notice: "" });
+        this.createLink();
     },
 
     candidateImageError(event) {
@@ -472,8 +474,9 @@ Page({
 
     setType(event) {
         const type = event.currentTarget.dataset.type;
-        if (!["goods", "activity", "live", "life"].includes(type)) return;
+        if (this.data.busy || !this.data.selected || type === this.data.selectedType || !["goods", "activity", "live", "life"].includes(type)) return;
         this.setData({ selectedType: type, item: null, link: null });
+        this.createLink();
     },
 
     selection(forItem = false) {
@@ -504,13 +507,79 @@ Page({
         this.run(async () => {
             const selected = this.selection();
             if (!selected) throw new Error("请先解析并选择一条有效候选物料。");
+            const version = this.candidateVersion;
+            const index = this.data.selectedIndex;
+            const session = getApp().globalData.session;
+            const isCurrent = () => version === this.candidateVersion && index === this.data.selectedIndex &&
+                selected.materialType === this.data.selectedType && session === getApp().globalData.session && this.data.connected;
             const link = (await this.api("link", selected)).data;
+            if (!isCurrent()) return;
             this.setData({ link, notice: "已生成推广链接；这不代表已产生订单。" });
+            this.guideLink(link, selected.platform, isCurrent);
         });
     },
 
+    guideLink(link, platform, isCurrent) {
+        const fallback = () => {
+            if (!isCurrent()) return;
+            const code = typeof link?.code === "string" ? link.code.trim() : "";
+            const url = link?.shortUrl || link?.url;
+            if (code) this.copyPromotion(code, "口令", platform, isCurrent);
+            else if (url) this.copyPromotion(url, "网址", platform, isCurrent);
+            else this.setData({ error: "转链成功，但没有可用的小程序、口令或网址。" });
+        };
+        if (!link?.miniProgram?.appId || typeof wx.navigateToMiniProgram !== "function") return fallback();
+        let settled = false;
+        try {
+            wx.navigateToMiniProgram({
+                appId: link.miniProgram.appId,
+                path: link.miniProgram.path || "",
+                success: () => { settled = true; },
+                fail: () => {
+                    if (settled) return;
+                    settled = true;
+                    fallback();
+                },
+            });
+        } catch {
+            if (!settled) fallback();
+        }
+    },
+
+    copyPromotion(value, kind, platform, isCurrent = () => this.data.connected) {
+        try {
+            wx.setClipboardData({
+                data: value,
+                success: () => {
+                    if (!isCurrent()) return;
+                    this.setData({ error: "" });
+                    wx.showModal({ title: `${kind}复制成功`, content: `已复制${kind}，请打开${platformLabels[platform] || platform || "购物平台"}继续购买。`, showCancel: false });
+                },
+                fail: () => {
+                    if (isCurrent()) this.setData({ error: `${kind}复制失败，请重试。` });
+                },
+            });
+        } catch {
+            if (isCurrent()) this.setData({ error: `${kind}复制失败，请重试。` });
+        }
+    },
+
+    openMiniProgram() {
+        const link = this.data.link;
+        if (link?.miniProgram?.appId && !this.data.busy) {
+            this.guideLink(link, this.data.selected?.platform, () => this.data.connected && this.data.link === link);
+        }
+    },
+
+    copyCode() {
+        const link = this.data.link;
+        if (link?.code) this.copyPromotion(link.code, "口令", this.data.selected?.platform, () => this.data.connected && this.data.link === link);
+    },
+
     copyLink() {
-        if (this.data.link?.url) wx.setClipboardData({ data: this.data.link.url });
+        const link = this.data.link;
+        const url = link?.shortUrl || link?.url;
+        if (url) this.copyPromotion(url, "网址", this.data.selected?.platform, () => this.data.connected && this.data.link === link);
     },
 
     copyOrderSn(event) {
