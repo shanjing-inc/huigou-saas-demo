@@ -46,8 +46,6 @@
 | 管理收款账号 | 成员：`listWithdrawalAccounts` → 按需 `createWithdrawalAccount` / `updateWithdrawalAccount` / `deleteWithdrawalAccount`。 |
 | 申请提现、查看进度 | 成员：`getProfile` → `listWithdrawalAccounts` → 核对账号和金额 → `requestWithdrawal` → `listWithdrawals`。 |
 
-商品详情优先用解析出的商品 ID，转链用解析结果中的商品链接。账号变更和提现会影响实际数据，只执行用户已授权的操作；提现结果不明时先查记录。
-
 遇到报错时查 [接口错误处理](skills/huigou-saas-skills/references/errors.md)。
 
 ## 让 AI 帮你开发
