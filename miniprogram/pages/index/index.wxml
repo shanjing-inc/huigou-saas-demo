@@ -3,6 +3,17 @@
         <view wx:if="{{mode !== 'promote' && mode !== 'orders' && mode !== 'profile'}}" class="nav-back" role="button" aria-label="返回上级页面" bindtap="backToProfile">‹</view>
         <text class="nav-title">{{mode === 'promote' ? '惠购网' : mode === 'orders' ? '我的订单' : mode === 'profile' ? '我的' : mode === 'wallet' ? '我的钱包' : mode === 'accounts' ? '收款账号' : mode === 'withdraw' ? '申请提现' : mode === 'bills' ? '我的账单' : '提现记录'}}</text>
     </view>
+    <view wx:if="{{!connected || mode === 'profile'}}" class="server-entry" role="button" aria-label="服务设置" bindtap="toggleServerSettings">服务设置 ›</view>
+
+    <view wx:if="{{serverSettingsOpen}}" class="server-settings">
+        <view class="section-head">服务设置</view>
+        <view class="input-label">Demo 后端地址</view>
+        <input class="money-input" value="{{draftBackendBase}}" placeholder="http://192.168.1.10:8787" data-field="draftBackendBase" bindinput="updateServerField" />
+        <view class="input-label">局域网调试密钥</view>
+        <input class="money-input" password="{{true}}" value="{{draftBackendToken}}" placeholder="从本机 .env 获取" data-field="draftBackendToken" bindinput="updateServerField" />
+        <view class="hint">真机 HTTP 仅供同一可信局域网开启微信调试模式时使用；正式版需使用 HTTPS 合法域名。</view>
+        <view class="money-actions"><button class="money-action quiet" bindtap="toggleServerSettings">取消</button><button class="money-action primary" bindtap="saveServerSettings">保存并连接</button></view>
+    </view>
 
     <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
     <view wx:if="{{notice}}" class="notice">{{notice}}</view>

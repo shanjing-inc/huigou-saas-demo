@@ -1,4 +1,10 @@
-const BASE = "http://127.0.0.1:8787";
+const DEFAULT_BACKEND = "http://127.0.0.1:8787";
+const BACKEND_STORAGE = "demoBackendSettings";
+function validBackend(value) {
+    if (typeof value !== "string" || !/^https?:\/\/[a-z0-9.-]+(?::\d{1,5})?\/?$/i.test(value)) return false;
+    const port = value.match(/:(\d+)\/?$/)?.[1];
+    return !port || (Number(port) >= 1 && Number(port) <= 65535);
+}
 const sections = ["promote", "orders", "profile", "wallet", "bills", "withdrawals"];
 const walletPeriods = ["day", "month", "year"];
 const accountLabels = { 1: "支付宝", 2: "微信", 3: "银行卡" };
@@ -48,6 +54,11 @@ Page({
         backendReachable: false,
         backendChecked: false,
         checkingBackend: false,
+        backendBase: DEFAULT_BACKEND,
+        backendToken: "",
+        draftBackendBase: DEFAULT_BACKEND,
+        draftBackendToken: "",
+        serverSettingsOpen: false,
         mode: "promote",
         connected: false,
         busy: false,
@@ -81,15 +92,65 @@ Page({
     },
 
     onShow() {
+        if (!this.backendSettingsLoaded) {
+            this.backendSettingsLoaded = true;
+            const saved = typeof wx.getStorageSync === "function" ? wx.getStorageSync(BACKEND_STORAGE) : null;
+            if (saved && validBackend(saved.base) && (!saved.token || /^[a-f0-9]{64}$/i.test(saved.token))) {
+                this.setData({ backendBase: saved.base.replace(/\/$/, ""), backendToken: saved.token || "",
+                    draftBackendBase: saved.base.replace(/\/$/, ""), draftBackendToken: saved.token || "" });
+            }
+        }
+        this.checkBackend();
+    },
+
+    toggleServerSettings() {
+        this.setData({ serverSettingsOpen: !this.data.serverSettingsOpen, draftBackendBase: this.data.backendBase,
+            draftBackendToken: this.data.backendToken, error: "" });
+    },
+
+    updateServerField(event) {
+        const field = event.currentTarget.dataset.field;
+        if (["draftBackendBase", "draftBackendToken"].includes(field)) this.setData({ [field]: event.detail.value });
+    },
+
+    saveServerSettings() {
+        const base = this.data.draftBackendBase.trim().replace(/\/$/, "");
+        const token = this.data.draftBackendToken.trim();
+        const loopback = /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d{1,5})?$/i.test(base);
+        if (!validBackend(base)) {
+            this.setData({ error: "请输入完整的 HTTP 或 HTTPS 服务地址（不含路径）。" });
+            return;
+        }
+        if (!loopback && !/^[a-f0-9]{64}$/i.test(token)) {
+            this.setData({ error: "非本机服务需要填写后端生成的 64 位十六进制调试密钥。" });
+            return;
+        }
+        if (loopback && token) {
+            this.setData({ error: "本机回环服务不使用调试密钥，请清空后保存。" });
+            return;
+        }
+        try {
+            wx.setStorageSync(BACKEND_STORAGE, { base, token });
+        } catch {
+            this.setData({ error: "保存服务设置失败，请检查小程序本地存储。" });
+            return;
+        }
+        this.serverGeneration = (this.serverGeneration || 0) + 1;
+        this.clearSession();
+        this.setData({ backendBase: base, backendToken: token, serverSettingsOpen: false,
+            backendReachable: false, backendChecked: false, checkingBackend: false, busy: false, error: "", notice: "" });
         this.checkBackend();
     },
 
     checkBackend() {
         if (this.data.checkingBackend || this.data.busy) return;
+        const generation = this.serverGeneration;
         this.setData({ checkingBackend: true });
         wx.request({
-            url: `${BASE}/api/status`,
+            url: `${this.data.backendBase}/api/status`,
+            header: this.data.backendToken ? { "x-demo-access-token": this.data.backendToken } : {},
             success: ({ statusCode, data }) => {
+                if (generation !== this.serverGeneration) return;
                 const backendReachable = statusCode === 200 && data?.demo === true;
                 const backendSupportsAccounts = backendReachable && data.supportsAccountManagement === true;
                 const configured = backendReachable && Boolean(data.configured);
@@ -98,22 +159,23 @@ Page({
                     backendReachable,
                     configured,
                     backendSupportsAccounts,
-                    error: !backendReachable ? "本机端口未返回 Demo 后端状态，请检查服务和端口。"
-                        : !configured ? "本机后端尚未配置，请检查 .env 并重启后端。"
-                            : !backendSupportsAccounts ? "本机运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
+                    error: !backendReachable ? "服务未返回 Demo 后端状态，请检查服务地址、调试密钥和网络。"
+                        : !configured ? "后端尚未配置，请检查 .env 并重启后端。"
+                            : !backendSupportsAccounts ? "运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
                 });
                 if (configured && backendSupportsAccounts && !this.data.connected) void this.connect();
             },
             fail: () => {
+                if (generation !== this.serverGeneration) return;
                 this.clearSession();
                 this.setData({
                     backendReachable: false,
                     configured: false,
                     backendSupportsAccounts: false,
-                    error: "无法访问本机后端，请检查服务、端口和开发者工具的本地请求设置。",
+                    error: "无法访问后端，请检查服务地址、调试密钥、手机网络和微信调试模式。",
                 });
             },
-            complete: () => this.setData({ checkingBackend: false, backendChecked: true }),
+            complete: () => { if (generation === this.serverGeneration) this.setData({ checkingBackend: false, backendChecked: true }); },
         });
     },
 
@@ -125,16 +187,19 @@ Page({
     },
 
     api(action, data = {}) {
+        const generation = this.serverGeneration;
         return new Promise((resolve, reject) => {
             wx.request({
-                url: `${BASE}/api/${action}`,
+                url: `${this.data.backendBase}/api/${action}`,
                 method: "POST",
                 header: {
                     "content-type": "application/json",
+                    ...(this.data.backendToken ? { "x-demo-access-token": this.data.backendToken } : {}),
                     ...(getApp().globalData.session ? { "x-demo-session": getApp().globalData.session } : {}),
                 },
                 data,
                 success: ({ statusCode, data: body }) => {
+                    if (generation !== this.serverGeneration) return reject(new Error("服务地址已切换，请重试。"));
                     if (statusCode >= 200 && statusCode < 300) return resolve(body);
                     if (statusCode === 404 && body?.code === "NOT_FOUND" && ["accounts", "createAccount", "updateAccount", "deleteAccount", "withdraw"].includes(action)) {
                         this.setData({ backendSupportsAccounts: false });
@@ -143,22 +208,23 @@ Page({
                     if (body?.code === "SESSION_EXPIRED") {
                         this.clearSession();
                     }
-                    reject(new Error(body?.message || "服务请求失败，请检查本机后端。"));
+                    reject(new Error(body?.message || "服务请求失败，请检查后端。"));
                 },
-                fail: () => reject(new Error("无法连接本机后端；请检查端口、模拟器设置和本机网络。")),
+                fail: () => reject(new Error("无法连接后端；请检查服务地址、网络和微信调试模式。")),
             });
         });
     },
 
     async run(work) {
         if (this.data.busy) return;
+        const generation = this.serverGeneration;
         this.setData({ busy: true, error: "", notice: "" });
         try {
             await work();
         } catch (error) {
-            this.setData({ error: error.message });
+            if (generation === this.serverGeneration) this.setData({ error: error.message });
         } finally {
-            this.setData({ busy: false });
+            if (generation === this.serverGeneration) this.setData({ busy: false });
         }
     },
 
