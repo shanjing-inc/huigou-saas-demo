@@ -1,5 +1,4 @@
 import http from "node:http";
-import { timingSafeEqual } from "node:crypto";
 import { createDemo, DemoError, loadConfig } from "./core.mjs";
 
 function privateIPv4(value) {
@@ -11,26 +10,20 @@ function privateIPv4(value) {
 
 export function listenHost(env) {
     const host = env.DEMO_LAN_HOST?.trim();
+    if (env.DEMO_LAN_TOKEN) throw new Error("DEMO_LAN_TOKEN is no longer supported; remove it from .env.");
     if (!host) {
-        if (env.DEMO_LAN_TOKEN) throw new Error("DEMO_LAN_TOKEN requires DEMO_LAN_HOST.");
         return "127.0.0.1";
     }
     if (!privateIPv4(host)) throw new Error("DEMO_LAN_HOST must be a private IPv4 address on this computer.");
-    if (!/^[a-f0-9]{64}$/i.test(env.DEMO_LAN_TOKEN ?? "")) throw new Error("DEMO_LAN_TOKEN must be 64 hex characters (openssl rand -hex 32).");
     return host;
 }
 
-function authorized(req, env, host) {
+function authorized(req, host) {
     if (req.headers.origin) return false;
     if (req.headers.host !== `${host}:${req.socket.localPort}`) {
         return host === "127.0.0.1" && req.headers.host === `localhost:${req.socket.localPort}`;
     }
-    if (host === "127.0.0.1") return true;
-    if (!privateIPv4(req.socket.remoteAddress ?? "") && req.socket.remoteAddress !== "127.0.0.1") return false;
-    const supplied = req.headers["x-demo-access-token"];
-    const expected = Buffer.from(env.DEMO_LAN_TOKEN, "hex");
-    if (typeof supplied !== "string" || !/^[a-f0-9]{64}$/i.test(supplied)) return false;
-    return timingSafeEqual(Buffer.from(supplied, "hex"), expected);
+    return host === "127.0.0.1" || privateIPv4(req.socket.remoteAddress ?? "") || req.socket.remoteAddress === "127.0.0.1";
 }
 
 function respond(res, status, body) {
@@ -53,8 +46,8 @@ export function createServer(env, fetchImpl) {
     }
 
     return http.createServer(async (req, res) => {
-        if (!authorized(req, env, host)) {
-            respond(res, 403, { code: "FORBIDDEN", message: "服务地址或调试密钥无效。" });
+        if (!authorized(req, host)) {
+            respond(res, 403, { code: "FORBIDDEN", message: "服务地址无效。" });
             return;
         }
         if (req.url === "/api/status" && req.method === "GET") {

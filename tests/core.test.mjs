@@ -293,17 +293,15 @@ test("status does not reveal credentials; invalid host and content type are bloc
     assert.equal(invalid.status, 415);
 });
 
-test("LAN debugging requires an explicit private bind address and a full token", async () => {
-    const token = "a".repeat(64);
+test("LAN debugging binds only an explicit private IPv4 and rejects foreign hosts/origins", async () => {
     assert.equal(listenHost(env), "127.0.0.1");
     for (const host of ["0.0.0.0", "127.0.0.1", "8.8.8.8", "192.168.1.10.evil.test", "172.32.1.1", "::1"]) {
-        assert.throws(() => listenHost({ DEMO_LAN_HOST: host, DEMO_LAN_TOKEN: token }), /private IPv4/);
+        assert.throws(() => listenHost({ DEMO_LAN_HOST: host }), /private IPv4/);
     }
-    assert.throws(() => listenHost({ DEMO_LAN_HOST: "192.168.1.10" }), /DEMO_LAN_TOKEN/);
-    assert.throws(() => listenHost({ DEMO_LAN_TOKEN: token }), /DEMO_LAN_HOST/);
-    assert.equal(listenHost({ DEMO_LAN_HOST: "192.168.1.10", DEMO_LAN_TOKEN: token }), "192.168.1.10");
+    assert.throws(() => listenHost({ DEMO_LAN_TOKEN: "legacy" }), /no longer supported/);
+    assert.equal(listenHost({ DEMO_LAN_HOST: "192.168.1.10" }), "192.168.1.10");
 
-    const local = createServer({ ...env, DEMO_LAN_HOST: "192.168.1.10", DEMO_LAN_TOKEN: token }, upstream);
+    const local = createServer({ ...env, DEMO_LAN_HOST: "192.168.1.10" }, upstream);
     await new Promise((resolve) => local.listen(0, "127.0.0.1", resolve));
     try {
         const address = `http://127.0.0.1:${local.address().port}`;
@@ -317,17 +315,13 @@ test("LAN debugging requires an explicit private bind address and a full token",
             request.on("error", reject);
             request.end(body);
         });
-        let response = await probe("/api/status", { headers });
+        let response = await probe("/api/status", { headers: { ...headers, origin: "http://untrusted.test" } });
         assert.equal(response.statusCode, 403);
-        response = await probe("/api/login", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: "{}" });
-        assert.equal(response.statusCode, 403);
-        response = await probe("/api/status", { headers: { ...headers, "x-demo-access-token": "b".repeat(64) } });
-        assert.equal(response.statusCode, 403);
-        response = await probe("/api/status", { headers: { ...headers, "x-demo-access-token": token, origin: "http://untrusted.test" } });
-        assert.equal(response.statusCode, 403);
-        response = await probe("/api/status", { headers: { ...headers, "x-demo-access-token": token } });
+        response = await probe("/api/status", { headers });
         assert.equal(response.statusCode, 200);
-        response = await probe("/api/status", { headers: { host: `127.0.0.1:${local.address().port}`, "x-demo-access-token": token } });
+        response = await probe("/api/login", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: "{}" });
+        assert.equal(response.statusCode, 200);
+        response = await probe("/api/status", { headers: { host: `127.0.0.1:${local.address().port}` } });
         assert.equal(response.statusCode, 403);
     } finally {
         await new Promise((resolve) => local.close(resolve));

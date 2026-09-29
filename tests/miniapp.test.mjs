@@ -3,14 +3,13 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 
-function mountPage(request, setClipboardData = () => {}, showModal = () => {}, navigateToMiniProgram, storage = new Map()) {
+function mountPage(request, setClipboardData = () => {}, showModal = () => {}, navigateToMiniProgram, source = readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8")) {
     let definition;
     const app = { globalData: { session: "local-test-session" } };
-    runInNewContext(readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8"), {
+    runInNewContext(source, {
         Page: (value) => { definition = value; },
         getApp: () => app,
-        wx: { request, setClipboardData, showModal, getStorageSync: (key) => storage.get(key),
-            setStorageSync: (key, value) => storage.set(key, value), ...(navigateToMiniProgram ? { navigateToMiniProgram } : {}) },
+        wx: { request, setClipboardData, showModal, ...(navigateToMiniProgram ? { navigateToMiniProgram } : {}) },
     });
     return {
         ...definition,
@@ -182,59 +181,32 @@ test("status check rejects a different local service", () => {
     assert.match(page.data.error, /未返回 Demo 后端状态/);
 });
 
-test("phone settings persist an HTTP backend, authenticate status and actions, and reject stale callbacks", async () => {
+test("build-time backend URL serves status and actions without phone settings or an access token", async () => {
     const requests = [];
-    const storage = new Map();
-    const token = "a".repeat(64);
-    const page = mountPage((options) => requests.push(options), undefined, undefined, undefined, storage);
+    const source = readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8");
+    const configuredSource = source.replace('const BACKEND_BASE = "http://127.0.0.1:8787";', 'const BACKEND_BASE = "http://192.168.1.10:8787";');
+    assert.notEqual(configuredSource, source);
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.doesNotMatch(markup, /服务设置|draftBackendBase|draftBackendToken/);
+    assert.doesNotMatch(source, /getStorageSync|setStorageSync|x-demo-access-token|saveServerSettings/);
+    const page = mountPage((options) => requests.push(options), undefined, undefined, undefined, configuredSource);
     page.data.connected = false;
     page.onShow();
-    page.toggleServerSettings();
-    page.updateServerField({ currentTarget: { dataset: { field: "draftBackendBase" } }, detail: { value: "http://192.168.1.10:8787/" } });
-    page.saveServerSettings();
-    assert.match(page.data.error, /调试密钥/);
     assert.equal(requests.length, 1);
-    page.updateServerField({ currentTarget: { dataset: { field: "draftBackendToken" } }, detail: { value: token } });
-    page.saveServerSettings();
-    assert.equal(storage.get("demoBackendSettings").base, "http://192.168.1.10:8787");
-    assert.equal(page.data.serverSettingsOpen, false);
-    assert.equal(requests[1].url, "http://192.168.1.10:8787/api/status");
-    assert.equal(requests[1].header["x-demo-access-token"], token);
+    assert.equal(requests[0].url, "http://192.168.1.10:8787/api/status");
+    assert.equal(requests[0].header?.["x-demo-access-token"], undefined);
     requests[0].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[0].complete();
-    assert.equal(page.data.connected, false);
-    requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
-    requests[1].complete();
-    assert.equal(requests[2].url, "http://192.168.1.10:8787/api/login");
-    assert.equal(requests[2].header["x-demo-access-token"], token);
-    requests[2].success({ statusCode: 200, data: { session: "phone-session", profile: { memberId: 3 } } });
+    assert.equal(requests[1].url, "http://192.168.1.10:8787/api/login");
+    assert.equal(requests[1].header["x-demo-access-token"], undefined);
+    requests[1].success({ statusCode: 200, data: { session: "phone-session", profile: { memberId: 3 } } });
     await flush();
     assert.equal(page.data.connected, true);
     page.api("profile");
-    assert.equal(requests[3].header["x-demo-access-token"], token);
-    assert.equal(requests[3].header["x-demo-session"], "phone-session");
-
-    const reloaded = mountPage((options) => requests.push(options), undefined, undefined, undefined, storage);
-    reloaded.data.connected = false;
-    reloaded.onShow();
-    assert.equal(requests[4].url, "http://192.168.1.10:8787/api/status");
-    assert.equal(requests[4].header["x-demo-access-token"], token);
-    requests[3].success({ statusCode: 200, data: { data: {} } });
-});
-
-test("settings reject credentials in URL, paths, and unsupported ports", () => {
-    const requests = [];
-    const page = mountPage((options) => requests.push(options));
-    for (const value of ["http://user:password@localhost", "http://192.168.1.10:99999", "http://192.168.1.10/api", "ftp://example.com"]) {
-        page.setData({ draftBackendBase: value, draftBackendToken: "b".repeat(64) });
-        page.saveServerSettings();
-        assert.match(page.data.error, /服务地址/);
-    }
-    assert.equal(requests.length, 0);
-    page.setData({ draftBackendBase: "http://127.0.0.1:9000", draftBackendToken: "" });
-    page.saveServerSettings();
-    assert.equal(requests[0].url, "http://127.0.0.1:9000/api/status");
-    assert.equal(requests[0].header["x-demo-access-token"], undefined);
+    assert.equal(requests[2].url, "http://192.168.1.10:8787/api/profile");
+    assert.equal(requests[2].header["x-demo-access-token"], undefined);
+    assert.equal(requests[2].header["x-demo-session"], "phone-session");
+    requests[2].success({ statusCode: 200, data: { data: {} } });
 });
 
 test("item lookup uses parsed product ID while conversion keeps the candidate URL", async () => {
