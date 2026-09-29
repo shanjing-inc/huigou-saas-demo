@@ -227,7 +227,7 @@ test("mini-program navigation failure copies code once and prompts for the corre
     page.candidateVersion = 1;
     page.data.candidates = [candidate("1")];
     page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
-    requests[0].success({ statusCode: 200, data: { data: { miniProgram: { appId: "wx123" }, code: "京东口令", shortUrl: "https://short.example/1" } } });
+    requests[0].success({ statusCode: 200, data: { data: { miniProgram: { appId: "wx123", path: "pages/goods" }, code: "京东口令", shortUrl: "https://short.example/1" } } });
     await flush();
     navigation[0].fail();
     navigation[0].fail();
@@ -235,6 +235,109 @@ test("mini-program navigation failure copies code once and prompts for the corre
     assert.match(dialogs[0].title, /口令复制成功/);
     assert.match(dialogs[0].content, /打开京东/);
     assert.equal(dialogs[0].showCancel, false);
+});
+
+test("JD share text opens by shortLink without inventing an appId or page path", async () => {
+    const requests = [];
+    const navigation = [];
+    const copies = [];
+    const page = mountPage((options) => requests.push(options), (options) => copies.push(options), () => {}, (options) => navigation.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("123")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[0].success({ statusCode: 200, data: { data: {
+        miniProgram: { appId: null, path: null, shortLink: "#小程序://京东购物/verified-token" },
+        code: "ordinary-code", shortUrl: "https://u.jd.com/example", url: "https://jd.example/full",
+    } } });
+    await flush();
+    assert.equal(navigation.length, 1);
+    assert.equal(navigation[0].shortLink, "#小程序://京东购物/verified-token");
+    assert.equal("appId" in navigation[0], false);
+    assert.equal("path" in navigation[0], false);
+    navigation[0].success();
+    assert.equal(copies.length, 0);
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.match(markup, /bindtap="retryCopyMiniProgramLink"/);
+    assert.match(markup, /link\.miniProgram\.shortLink/);
+});
+
+test("navigation failure copies the mini-program share text before ordinary code or URL", async () => {
+    const requests = [];
+    const navigation = [];
+    const copied = [];
+    const dialogs = [];
+    const page = mountPage((options) => requests.push(options), (options) => { copied.push(options.data); options.success(); }, (options) => dialogs.push(options), (options) => navigation.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("1")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[0].success({ statusCode: 200, data: { data: {
+        miniProgram: { appId: "wx123", path: "pages/goods?id=1", shortLink: "#小程序://京东购物/token" },
+        code: "ordinary-code", url: "https://jd.example/full",
+    } } });
+    await flush();
+    assert.equal(navigation[0].appId, "wx123");
+    assert.equal(navigation[0].path, "pages/goods?id=1");
+    navigation[0].fail();
+    assert.equal(navigation[1].shortLink, "#小程序://京东购物/token");
+    navigation[0].fail();
+    assert.equal(navigation.length, 2);
+    navigation[1].fail();
+    navigation[1].fail();
+    assert.deepEqual(copied, ["#小程序://京东购物/token"]);
+    assert.match(dialogs[0].content, /微信.*粘贴到聊天中打开/);
+    page.retryCopyMiniProgramLink();
+    assert.deepEqual(copied, ["#小程序://京东购物/token", "#小程序://京东购物/token"]);
+});
+
+test("missing navigation API copies mini-program shortLink; an old navigation callback cannot copy", async () => {
+    const copied = [];
+    const dialogs = [];
+    const requests = [];
+    const page = mountPage((options) => requests.push(options), (options) => { copied.push(options.data); options.success(); }, (options) => dialogs.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("1")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[0].success({ statusCode: 200, data: { data: { miniProgram: { appId: null, path: null, shortLink: "https://wxaurl.cn/example" }, url: "https://jd.example/full" } } });
+    await flush();
+    assert.deepEqual(copied, ["https://wxaurl.cn/example"]);
+    assert.match(dialogs[0].content, /在微信中打开/);
+
+    const navigation = [];
+    const oldPage = mountPage((options) => requests.push(options), (options) => copied.push(options.data), () => {}, (options) => navigation.push(options));
+    oldPage.candidateVersion = 1;
+    oldPage.data.candidates = [candidate("2")];
+    oldPage.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[1].success({ statusCode: 200, data: { data: { miniProgram: { appId: null, path: null, shortLink: "#小程序://京东购物/old" } } } });
+    await flush();
+    oldPage.clearSession();
+    navigation[0].fail();
+    assert.equal(copied.length, 1);
+});
+
+test("failed mini-program share-text copy offers a manual retry without claiming success", async () => {
+    const requests = [];
+    const navigation = [];
+    const dialogs = [];
+    const copied = [];
+    let failCopy = true;
+    const page = mountPage((options) => requests.push(options), (options) => {
+        copied.push(options.data);
+        if (failCopy) options.fail();
+        else options.success();
+    }, (options) => dialogs.push(options), (options) => navigation.push(options));
+    page.candidateVersion = 1;
+    page.data.candidates = [candidate("1")];
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[0].success({ statusCode: 200, data: { data: { miniProgram: { appId: null, path: null, shortLink: "#小程序://京东购物/token" } } } });
+    await flush();
+    navigation[0].fail();
+    assert.equal(page.data.error, "小程序分享文本复制失败，请重试。");
+    assert.equal(dialogs.length, 0);
+    failCopy = false;
+    page.retryCopyMiniProgramLink();
+    assert.deepEqual(copied, ["#小程序://京东购物/token", "#小程序://京东购物/token"]);
+    assert.equal(page.data.error, "");
+    assert.match(dialogs[0].title, /小程序分享文本复制成功/);
 });
 
 test("without a mini-program, code wins over URL and URL is copied when code is absent", async () => {
