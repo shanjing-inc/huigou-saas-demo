@@ -1,4 +1,4 @@
-name: Docs
+name: Demo checks
 on:
   pull_request:
   push:
@@ -16,4 +16,4 @@ jobs:
           node-version: 20.11.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm docs:check
+      - run: pnpm test

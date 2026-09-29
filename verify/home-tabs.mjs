@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const exec = promisify(execFile);
 const project = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const source = readFileSync(`${project}/miniprogram/pages/index/index.js`, "utf8");
+const source = readFileSync(`${project}/miniprogram/packages/rebate/pages/index/index.js`, "utf8");
 assert.match(source, /const BASE = "http:\/\/127\.0\.0\.1:18787";/, "Only run this offline preview against the isolated port");
 
 async function ide(tool, ...args) {
@@ -29,7 +29,7 @@ async function preview(mode, screenshot) {
     await ide("simulator_screenshot", "--path", `${project}/verify/${screenshot}.jpg`, "--wait-for-selector", ".bottom-nav");
 }
 
-await ide("simulator_open_page", "--page", "pages/index/index");
+await ide("simulator_open_page", "--page", "packages/rebate/pages/index/index");
 assert.equal((await pageData()).connected, false);
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     connected: true, busy: false, error: "", notice: "离线布局样例 · 非接口数据",

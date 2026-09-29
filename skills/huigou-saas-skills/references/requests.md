@@ -1,6 +1,6 @@
 # 签名与请求示例
 
-先按[接入说明](guide.md)确认目标环境、接口字段和授权范围。
+先按[接入说明](https://github.com/shanjing-inc/huigou-saas-demo/blob/master/README.md)确认目标环境、接口字段和授权范围。
 
 ## 应用签名
 

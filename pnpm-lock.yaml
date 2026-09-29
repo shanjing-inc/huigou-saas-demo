@@ -6,19 +6,4 @@ settings:
 
 importers:
 
-  .:
-    devDependencies:
-      marked:
-        specifier: 15.0.12
-        version: 15.0.12
-
-packages:
-
-  marked@15.0.12:
-    resolution: {integrity: sha512-8dD6FusOQSrpv9Z1rdNMdlSgQOIP880DHqnohobOmYLElGEqAL/JvxvuxZO16r4HtjTlfPRDC1hbvxC9dPN2nA==}
-    engines: {node: '>= 18'}
-    hasBin: true
-
-snapshots:
-
-  marked@15.0.12: {}
+  .: {}

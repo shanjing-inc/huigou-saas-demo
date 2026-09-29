@@ -16,8 +16,8 @@ async function ide(tool, ...args) {
     return result.result;
 }
 
-await ide("compile_wxml", "--file-path", "pages/index/index.wxml");
-await ide("compile_wxss", "--file-path", "pages/index/index.wxss");
-await ide("simulator_open_page", "--page", "pages/index/index");
+await ide("compile_wxml", "--file-path", "packages/rebate/pages/index/index.wxml");
+await ide("compile_wxss", "--file-path", "packages/rebate/pages/index/index.wxss");
+await ide("simulator_open_page", "--page", "packages/rebate/pages/index/index");
 await ide("simulator_screenshot", "--path", `${project}/verify/backend-url.jpg`, "--wait-for-selector", ".app-nav");
 console.log("Backend URL screen compiled and captured; no phone-side settings are present.");

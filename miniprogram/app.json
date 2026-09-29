@@ -1,5 +1,6 @@
 {
     "pages": ["pages/index/index"],
+    "subPackages": [{ "root": "packages/rebate", "pages": ["pages/index/index"] }],
     "window": {
         "navigationBarTitleText": "惠购 Saas 版",
         "navigationBarBackgroundColor": "#f7f9f8",

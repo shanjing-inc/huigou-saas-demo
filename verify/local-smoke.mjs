@@ -52,7 +52,7 @@ await new Promise((resolve, reject) => server.once("error", reject).listen(8787,
 try {
     const status = await (await fetch("http://127.0.0.1:8787/api/status")).json();
     assert.equal(status.configured, true);
-    await ide("simulator_open_page", "--page", "pages/index/index");
+    await ide("simulator_open_page", "--page", "packages/rebate/pages/index/index");
     let page = await pageData("--wait-for-selector", ".shell");
     assert.equal(page.demo, true);
     assert.equal(page.configured, true);

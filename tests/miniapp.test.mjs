@@ -1,19 +1,17 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 
-function mountPage(request, setClipboardData = () => {}, showModal = () => {}, navigateToMiniProgram, source = readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8")) {
+function mountPage(request, setClipboardData = () => {}, showModal = () => {}, navigateToMiniProgram, source = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.js", import.meta.url), "utf8")) {
     let definition;
-    const app = { globalData: { session: "local-test-session" } };
     runInNewContext(source, {
         Page: (value) => { definition = value; },
-        getApp: () => app,
         wx: { request, setClipboardData, showModal, ...(navigateToMiniProgram ? { navigateToMiniProgram } : {}) },
     });
     return {
         ...definition,
-        app,
+        session: "local-test-session",
         data: { ...definition.data, connected: true },
         setData(patch) { Object.assign(this.data, patch); },
     };
@@ -24,9 +22,43 @@ const candidate = (itemId, itemUrl = `https://example.test/${itemId}`) => ({
     platform: "jd", type: "goods", keyContent: "same share text", detail: { itemId, itemUrl, itemTitle: `商品 ${itemId}` },
 });
 
+test("rebate package is self-contained and launches from the main debug page", () => {
+    const config = JSON.parse(readFileSync(new URL("../miniprogram/app.json", import.meta.url), "utf8"));
+    assert.deepEqual(config.pages, ["pages/index/index"]);
+    assert.deepEqual(config.subPackages, [{ root: "packages/rebate", pages: ["pages/index/index"] }]);
+    const target = "/packages/rebate/pages/index/index";
+    const launcher = readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8");
+    let page;
+    runInNewContext(launcher, { Page: (definition) => { page = definition; }, wx: { navigateTo: ({ url }) => assert.equal(url, target) } });
+    page.openDemo();
+    const source = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.js", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxss", import.meta.url), "utf8");
+    assert.doesNotMatch(source, /getApp\(|globalData|\.\.\//);
+    assert.match(styles, /^page \{/);
+    assert.match(markup, /src="\.\.\/\.\.\/images\/tab-shop/);
+    for (const icon of ["shop", "orders", "profile"]) {
+        for (const suffix of ["", "-active"]) {
+            assert.equal(existsSync(new URL(`../miniprogram/packages/rebate/images/tab-${icon}${suffix}.svg`, import.meta.url)), true);
+        }
+    }
+});
+
+test("repository entry is the integration guide and demo instructions remain separate", () => {
+    const guide = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    const demo = readFileSync(new URL("../DEMO-README.md", import.meta.url), "utf8");
+    const skill = readFileSync(new URL("../skills/huigou-saas-skills/SKILL.md", import.meta.url), "utf8");
+    assert.match(guide, /https:\/\/saas\.tbxzs\.cn\//);
+    assert.match(guide, /\[Demo 启动说明\]\(DEMO-README\.md\)/);
+    assert.match(demo, /packages\/rebate\/pages\/index\/index/);
+    assert.match(skill, /DEMO-README\.md/);
+    assert.equal(existsSync(new URL("../使用说明.html", import.meta.url)), false);
+    assert.equal(existsSync(new URL("../skills/huigou-saas-skills/references/guide.md", import.meta.url)), false);
+});
+
 test("order and wallet views display only supported source metrics", () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
-    const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxss", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /分享订单|自购预估|带货预估|邀请预估|任务预估|待申请补贴/);
     assert.match(markup, /stat\.orderCount/);
     assert.match(markup, /stat\.displayEstimateMemberOrderCommission/);
@@ -39,7 +71,7 @@ test("order and wallet views display only supported source metrics", () => {
 });
 
 test("all monetary page labels use display fields without changing raw values", () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     for (const field of ["displayMoney", "displayPendingMoney", "displayWithdrawalMoney", "displayEstimateMemberOrderCommission", "displaySettledMemberOrderCommission"]) {
         assert.match(markup, new RegExp(`\\b(?:profile|stat)\\.${field}\\b`));
     }
@@ -48,8 +80,8 @@ test("all monetary page labels use display fields without changing raw values", 
 });
 
 test("shopping instructions render as evenly spaced rounded steps", () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
-    const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxss", import.meta.url), "utf8");
     assert.match(markup, /<view class="shopping-steps">\s*<view class="shopping-step"><text class="step-number">1<\/text><text>复制商品链接<\/text><\/view>/);
     assert.equal((markup.match(/<view class="shopping-step">/g) || []).length, 3);
     assert.match(styles, /\.shopping-step \{[^}]*flex: 1;[^}]*align-items: center;[^}]*border-radius: 20rpx;/);
@@ -57,7 +89,7 @@ test("shopping instructions render as evenly spaced rounded steps", () => {
 });
 
 test("parse screens and prompts describe results without changing candidate data", async () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     assert.match(markup, /解析结果 · {{candidates.length}}/);
     assert.doesNotMatch(markup, /已选解析结果|推广结果|刷新商品详情|bindtap="setType"|bindtap="retryCopyMiniProgramLink"/);
     assert.doesNotMatch(markup, /候选/);
@@ -104,7 +136,7 @@ test("opening the page automatically logs in when the backend starts, without a 
     assert.equal(page.data.profile.memberId, 7);
     assert.equal(page.data.profile.money, "0.0000");
     assert.deepEqual([page.data.profile.displayMoney, page.data.profile.displayPendingMoney, page.data.profile.displayWithdrawalMoney], ["0", "8.94", "1.1"]);
-    assert.equal(page.app.globalData.session, "new-session");
+    assert.equal(page.session, "new-session");
     page.onShow();
     requests[3].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[3].complete();
@@ -203,10 +235,10 @@ test("status check rejects a different local service", () => {
 
 test("build-time backend URL serves status and actions without phone settings or an access token", async () => {
     const requests = [];
-    const source = readFileSync(new URL("../miniprogram/pages/index/index.js", import.meta.url), "utf8");
+    const source = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.js", import.meta.url), "utf8");
     const configuredSource = source.replace('const BACKEND_BASE = "http://127.0.0.1:8787";', 'const BACKEND_BASE = "http://192.168.1.10:8787";');
     assert.notEqual(configuredSource, source);
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /服务设置|draftBackendBase|draftBackendToken/);
     assert.doesNotMatch(source, /getStorageSync|setStorageSync|x-demo-access-token|saveServerSettings/);
     const page = mountPage((options) => requests.push(options), undefined, undefined, undefined, configuredSource);
@@ -277,7 +309,7 @@ test("tapping a candidate converts once and opens the mini-program before copyin
     navigation[0].success();
     assert.equal(copies.length, 0);
     assert.equal(page.data.link.code, "￥口令￥");
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /生成转链/);
     assert.match(markup, /bindtap="selectCandidate"/);
     assert.doesNotMatch(markup, /<block wx:if="{{selected}}">|<view wx:if="{{link}}" class="result"/);
@@ -321,7 +353,7 @@ test("JD share text opens by shortLink without inventing an appId or page path",
     assert.equal("path" in navigation[0], false);
     navigation[0].success();
     assert.equal(copies.length, 0);
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /bindtap="retryCopyMiniProgramLink"|link\.miniProgram\.shortLink/);
 });
 
@@ -644,7 +676,7 @@ test("wallet switches periods, paginates only real buckets, and history opens fr
 });
 
 test("wallet withdrawal opens account management only through withdrawal and preserves entered amount", async () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     const wallet = markup.split('<view wx:elif="{{mode === \'wallet\'}}"')[1].split('<view wx:elif="{{mode === \'accounts\'}}"')[0];
     assert.match(markup, /data-mode="withdrawals" bindtap="changeTab"[^>]*>.*提现记录<\/text>/);
     assert.match(wallet, /bindtap="openWithdrawal">去提现/);
@@ -704,7 +736,7 @@ test("wallet session expiration clears balances and statistics", async () => {
     assert.equal(page.data.connected, false);
     assert.equal(page.data.profile, null);
     assert.equal(page.data.walletStats.length, 0);
-    assert.equal(page.app.globalData.session, "");
+    assert.equal(page.session, "");
     assert.match(page.data.error, /会话已失效/);
 
     page.onShow();
@@ -721,7 +753,7 @@ test("wallet session expiration clears balances and statistics", async () => {
 });
 
 test("startup offers retry, not connect or disconnect controls", () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     assert.match(markup, /正在加载成员资料/);
     assert.match(markup, /bindtap="checkBackend">重试加载/);
     assert.doesNotMatch(markup, /bindtap="connect"|bindtap="disconnect"/);
@@ -822,7 +854,7 @@ test("withdrawal requires account selection and user confirmation without a swit
 });
 
 test("shopping, orders and profile are the only root tabs; profile retains the real record entries", async () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /正式服务|影响实际数据|class="footer"/);
     const nav = markup.split('<view wx:if="{{mode === \'promote\' || mode === \'orders\' || mode === \'profile\'}}" class="bottom-nav">')[1];
     assert.ok(nav);
@@ -865,15 +897,15 @@ test("shopping, orders and profile are the only root tabs; profile retains the r
 });
 
 test("money records use wallet colors and render real bill and withdrawal details", async () => {
-    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
-    const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
+    const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxss", import.meta.url), "utf8");
     assert.match(markup, /金额明细/);
     assert.match(markup, /item\.displayAmount/);
     assert.match(markup, /item\.failureReason/);
     assert.match(markup, /item\.accountLabel/);
     assert.doesNotMatch(styles, /#4a63f4|#465ff1/i);
     for (const icon of ["shop", "orders", "profile"]) {
-        assert.match(readFileSync(new URL(`../miniprogram/images/tab-${icon}-active.svg`, import.meta.url), "utf8"), /#ff6247/i);
+        assert.match(readFileSync(new URL(`../miniprogram/packages/rebate/images/tab-${icon}-active.svg`, import.meta.url), "utf8"), /#ff6247/i);
     }
 
     const requests = [];
