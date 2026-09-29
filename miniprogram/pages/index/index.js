@@ -7,6 +7,11 @@ const withdrawalLabels = {
     1: "系统审核中", 2: "已驳回", 3: "待打款", 4: "打款中",
     5: "打款成功", 6: "打款失败", 7: "人工审核中",
 };
+const billLabels = {
+    1: "网购返利", 2: "分享收益", 3: "维权调整", 4: "提现", 5: "提现失败退款",
+    6: "任务奖励", 7: "邀请奖励", 8: "客服调整", 9: "个税", 10: "消费扣款",
+    11: "消费退款", 12: "惠购收款",
+};
 const orderLabels = { "-2": "系统关闭", "-1": "已关闭", 1: "已下单", 2: "已付款", 3: "已发货", 4: "已收货" };
 const platformLabels = { alibaba: "1688", jd: "京东", taobao: "淘宝", vip: "唯品会", pdd: "拼多多", douyin: "抖音" };
 const platformMarks = { alibaba: "阿", jd: "京", taobao: "淘", vip: "唯", pdd: "拼", douyin: "抖" };
@@ -19,6 +24,28 @@ function displayAmount(value) {
     if (value == null) return value;
     const text = String(value).trim();
     return /^-?\d+\.\d+$/.test(text) ? text.replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : text;
+}
+
+function billRecord(item) {
+    const amount = displayAmount(item.amount);
+    const decrease = String(item.amount).trim().startsWith("-") || item.action === 2;
+    return {
+        ...item,
+        title: billLabels[item.event] || "金额变动",
+        displayAmount: `${decrease ? "-" : "+"}${String(amount).replace(/^-/, "")}`,
+        decrease,
+    };
+}
+
+function withdrawalRecord(item) {
+    return {
+        ...item,
+        displayAmount: displayAmount(item.amount),
+        statusLabel: withdrawalLabels[item.status] || `状态 ${item.status}`,
+        statusTone: item.status === 5 ? "success" : item.status === 2 || item.status === 6 ? "failed" : "pending",
+        accountLabel: accountLabels[item.withdrawalAccountType] || "收款账号",
+        failureReason: (item.status === 2 || item.status === 6) ? String(item.memo || "").trim() : "",
+    };
 }
 
 function orderRecord(item) {
@@ -629,10 +656,7 @@ Page({
         this.run(async () => {
             const mode = this.data.mode;
             const result = (await this.api(mode, { page })).data;
-            const records = result.items.map((item) => mode === "orders" ? orderRecord(item) : ({
-                ...item,
-                statusLabel: mode === "withdrawals" ? withdrawalLabels[item.status] || `状态 ${item.status}` : `状态 ${item.status ?? "未知"}`,
-            }));
+            const records = result.items.map((item) => mode === "orders" ? orderRecord(item) : mode === "bills" ? billRecord(item) : withdrawalRecord(item));
             if (mode !== this.data.mode) return;
             this.setData({ records: page === 1 ? records : this.data.records.concat(records), page, hasMore: Boolean(result.hasMore), loaded: true });
         });

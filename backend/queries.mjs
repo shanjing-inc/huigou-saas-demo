@@ -63,7 +63,7 @@ export const operations = Object.freeze({
     bills: {
         endpoint: "member",
         query: `query Bills($page: Int!, $limit: Int!) {
-            listBills(page: $page, limit: $limit) {
+            listBills(page: $page, limit: $limit, orderBy: { createdAt: { direction: DESC, priority: 0 }, id: { direction: DESC, priority: 1 } }) {
                 hasMore items { id amount action event memo createdAt }
             }
         }`,
@@ -72,8 +72,8 @@ export const operations = Object.freeze({
     withdrawals: {
         endpoint: "member",
         query: `query Withdrawals($page: Int!, $limit: Int!) {
-            listWithdrawals(page: $page, limit: $limit) {
-                hasMore items { id amount status createdAt updatedAt }
+            listWithdrawals(page: $page, limit: $limit, orderBy: { createdAt: { direction: DESC, priority: 0 }, id: { direction: DESC, priority: 1 } }) {
+                hasMore items { id amount status memo createdAt updatedAt withdrawalAccountId withdrawalAccountType }
             }
         }`,
         field: "listWithdrawals",

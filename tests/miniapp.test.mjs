@@ -38,6 +38,15 @@ test("order and wallet views display only supported source metrics", () => {
     assert.match(styles, /\.copy-order \{[^}]+align-items: center;[^}]+justify-content: center;/);
 });
 
+test("shopping instructions render as evenly spaced rounded steps", () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
+    assert.match(markup, /<view class="shopping-steps">\s*<view class="shopping-step"><text class="step-number">1<\/text><text>复制商品链接<\/text><\/view>/);
+    assert.equal((markup.match(/<view class="shopping-step">/g) || []).length, 3);
+    assert.match(styles, /\.shopping-step \{[^}]*flex: 1;[^}]*align-items: center;[^}]*border-radius: 20rpx;/);
+    assert.doesNotMatch(styles, /\.shopping-steps > text/);
+});
+
 test("parse screens and prompts describe results without changing candidate data", async () => {
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
     assert.match(markup, /解析结果 · {{candidates.length}}/);
@@ -798,4 +807,46 @@ test("shopping, orders and profile are the only root tabs; profile retains the r
     await flush();
     page.backToProfile();
     assert.equal(page.data.mode, "profile");
+});
+
+test("money records use wallet colors and render real bill and withdrawal details", async () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
+    assert.match(markup, /金额明细/);
+    assert.match(markup, /item\.displayAmount/);
+    assert.match(markup, /item\.failureReason/);
+    assert.match(markup, /item\.accountLabel/);
+    assert.doesNotMatch(styles, /#4a63f4|#465ff1/i);
+    for (const icon of ["shop", "orders", "profile"]) {
+        assert.match(readFileSync(new URL(`../miniprogram/images/tab-${icon}-active.svg`, import.meta.url), "utf8"), /#ff6247/i);
+    }
+
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.changeTab({ currentTarget: { dataset: { mode: "bills" } } });
+    requests[0].success({ statusCode: 200, data: { data: { hasMore: false, items: [
+        { id: 1, event: 1, action: 1, amount: "18.4400", createdAt: "2026-09-25 13:29:00", memo: "京东订单" },
+        { id: 2, event: 4, action: 2, amount: "-1.20", createdAt: "2026-09-25 13:30:00", memo: "" },
+        { id: 3, event: 7, action: 1, amount: "0.10", createdAt: "2026-09-25 13:31:00", memo: "推荐奖金" },
+    ] } } });
+    await flush();
+    assert.deepEqual(Array.from(page.data.records, ({ title, displayAmount, decrease }) => ({ title, displayAmount, decrease })), [
+        { title: "网购返利", displayAmount: "+18.44", decrease: false },
+        { title: "提现", displayAmount: "-1.2", decrease: true },
+        { title: "邀请奖励", displayAmount: "+0.1", decrease: false },
+    ]);
+
+    page.changeTab({ currentTarget: { dataset: { mode: "withdrawals" } } });
+    requests[1].success({ statusCode: 200, data: { data: { hasMore: false, items: [
+        { id: 9, amount: "2.00", status: 5, withdrawalAccountId: "7", withdrawalAccountType: 1, memo: "", createdAt: "2026-09-25 13:29:00" },
+        { id: 10, amount: "1.20", status: 6, withdrawalAccountId: "8", withdrawalAccountType: 3, memo: "收款失败", createdAt: "2026-09-25 13:30:00" },
+        { id: 11, amount: "1.00", status: 1, withdrawalAccountId: "7", withdrawalAccountType: 1, memo: "", createdAt: "2026-09-25 13:31:00" },
+    ] } } });
+    await flush();
+    assert.deepEqual(Array.from(page.data.records, ({ displayAmount, statusLabel, statusTone, accountLabel, failureReason }) =>
+        ({ displayAmount, statusLabel, statusTone, accountLabel, failureReason })), [
+        { displayAmount: "2", statusLabel: "打款成功", statusTone: "success", accountLabel: "支付宝", failureReason: "" },
+        { displayAmount: "1.2", statusLabel: "打款失败", statusTone: "failed", accountLabel: "银行卡", failureReason: "收款失败" },
+        { displayAmount: "1", statusLabel: "系统审核中", statusTone: "pending", accountLabel: "支付宝", failureReason: "" },
+    ]);
 });
