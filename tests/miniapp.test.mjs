@@ -41,7 +41,7 @@ test("order and wallet views display only supported source metrics", () => {
 test("parse screens and prompts describe results without changing candidate data", async () => {
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
     assert.match(markup, /解析结果 · {{candidates.length}}/);
-    assert.match(markup, /已选解析结果/);
+    assert.doesNotMatch(markup, /已选解析结果|推广结果|刷新商品详情|bindtap="setType"|bindtap="retryCopyMiniProgramLink"/);
     assert.doesNotMatch(markup, /候选/);
 
     const page = mountPage((options) => options.success({ statusCode: 200, data: { data: [] } }));
@@ -232,6 +232,7 @@ test("tapping a candidate converts once and opens the mini-program before copyin
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /生成转链/);
     assert.match(markup, /bindtap="selectCandidate"/);
+    assert.doesNotMatch(markup, /<block wx:if="{{selected}}">|<view wx:if="{{link}}" class="result"/);
 });
 
 test("mini-program navigation failure copies code once and prompts for the correct platform", async () => {
@@ -273,8 +274,7 @@ test("JD share text opens by shortLink without inventing an appId or page path",
     navigation[0].success();
     assert.equal(copies.length, 0);
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
-    assert.match(markup, /bindtap="retryCopyMiniProgramLink"/);
-    assert.match(markup, /link\.miniProgram\.shortLink/);
+    assert.doesNotMatch(markup, /bindtap="retryCopyMiniProgramLink"|link\.miniProgram\.shortLink/);
 });
 
 test("navigation failure copies the mini-program share text before ordinary code or URL", async () => {
@@ -301,7 +301,10 @@ test("navigation failure copies the mini-program share text before ordinary code
     navigation[1].fail();
     assert.deepEqual(copied, ["#小程序://京东购物/token"]);
     assert.match(dialogs[0].content, /微信.*粘贴到聊天中打开/);
-    page.retryCopyMiniProgramLink();
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[1].success({ statusCode: 200, data: { data: { miniProgram: { shortLink: "#小程序://京东购物/token" } } } });
+    await flush();
+    navigation[2].fail();
     assert.deepEqual(copied, ["#小程序://京东购物/token", "#小程序://京东购物/token"]);
 });
 
@@ -330,7 +333,7 @@ test("missing navigation API copies mini-program shortLink; an old navigation ca
     assert.equal(copied.length, 1);
 });
 
-test("failed mini-program share-text copy offers a manual retry without claiming success", async () => {
+test("failed mini-program share-text copy prompts a new product tap to retry", async () => {
     const requests = [];
     const navigation = [];
     const dialogs = [];
@@ -347,10 +350,13 @@ test("failed mini-program share-text copy offers a manual retry without claiming
     requests[0].success({ statusCode: 200, data: { data: { miniProgram: { appId: null, path: null, shortLink: "#小程序://京东购物/token" } } } });
     await flush();
     navigation[0].fail();
-    assert.equal(page.data.error, "小程序分享文本复制失败，请重试。");
+    assert.equal(page.data.error, "小程序分享文本复制失败，请重新点击商品重试。");
     assert.equal(dialogs.length, 0);
     failCopy = false;
-    page.retryCopyMiniProgramLink();
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[1].success({ statusCode: 200, data: { data: { miniProgram: { shortLink: "#小程序://京东购物/token" } } } });
+    await flush();
+    navigation[1].fail();
     assert.deepEqual(copied, ["#小程序://京东购物/token", "#小程序://京东购物/token"]);
     assert.equal(page.data.error, "");
     assert.match(dialogs[0].title, /小程序分享文本复制成功/);
@@ -373,8 +379,7 @@ test("without a mini-program, code wins over URL and URL is copied when code is 
     assert.deepEqual(copied, ["code-1", "https://example.test/short"]);
     assert.match(dialogs[1].title, /网址复制成功/);
     assert.match(dialogs[1].content, /打开京东/);
-    page.setType({ currentTarget: { dataset: { type: "life" } } });
-    assert.equal(requests[2].data.materialType, "life");
+    assert.equal(page.data.selectedType, "goods");
 });
 
 test("clipboard failures show an honest error and let the user retry", async () => {
@@ -390,7 +395,9 @@ test("clipboard failures show an honest error and let the user retry", async () 
     assert.match(page.data.error, /口令复制失败/);
     assert.equal(dialogs.length, 0);
     failCopy = false;
-    page.copyCode();
+    page.selectCandidate({ currentTarget: { dataset: { index: 0 } } });
+    requests[1].success({ statusCode: 200, data: { data: { code: "retry-code" } } });
+    await flush();
     assert.match(dialogs[0].content, /打开京东/);
 });
 

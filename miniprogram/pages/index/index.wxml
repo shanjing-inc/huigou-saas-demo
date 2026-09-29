@@ -138,31 +138,6 @@
                     </view>
                 </view>
             </view>
-            <block wx:if="{{selected}}">
-                <view class="subhead">已选解析结果 · {{selected.platform}}</view>
-                <view class="type-row">
-                    <view class="type {{selectedType === 'goods' ? 'selected' : ''}}" data-type="goods" bindtap="setType">商品</view>
-                    <view class="type {{selectedType === 'activity' ? 'selected' : ''}}" data-type="activity" bindtap="setType">活动</view>
-                    <view class="type {{selectedType === 'live' ? 'selected' : ''}}" data-type="live" bindtap="setType">直播</view>
-                    <view class="type {{selectedType === 'life' ? 'selected' : ''}}" data-type="life" bindtap="setType">团购</view>
-                </view>
-                <view class="actions">
-                    <button class="quiet half" disabled="{{busy || (selectedType !== 'goods' && selectedType !== 'life')}}" bindtap="getItem">刷新商品详情</button>
-                </view>
-                <view wx:if="{{busy}}" class="meta">正在生成推广链接…</view>
-                <view wx:if="{{link}}" class="result">
-                    <view class="subhead">推广结果 <text class="eyebrow">LIVE TEST</text></view>
-                    <view wx:if="{{link.url}}" class="url-text">{{link.url}}</view>
-                    <view wx:if="{{link.shortUrl}}" class="meta">短链：{{link.shortUrl}}</view>
-                    <view wx:if="{{link.code}}" class="meta">口令：{{link.code}}</view>
-                    <view wx:if="{{link.miniProgram && link.miniProgram.appId && link.miniProgram.path}}" class="meta">小程序：{{link.miniProgram.appId}} / {{link.miniProgram.path}}</view>
-                    <view wx:if="{{link.miniProgram && link.miniProgram.shortLink}}" class="meta url-text">小程序链接：{{link.miniProgram.shortLink}}</view>
-                    <button wx:if="{{link.miniProgram && ((link.miniProgram.appId && link.miniProgram.path) || link.miniProgram.shortLink)}}" class="quiet" bindtap="openMiniProgram">打开小程序</button>
-                    <button wx:if="{{link.miniProgram && link.miniProgram.shortLink}}" class="quiet" bindtap="retryCopyMiniProgramLink">复制小程序链接</button>
-                    <button wx:if="{{link.code}}" class="quiet" bindtap="copyCode">复制口令</button>
-                    <button wx:if="{{link.shortUrl || link.url}}" class="quiet" bindtap="copyLink">复制网址</button>
-                </view>
-            </block>
         </view>
 
         <view wx:else class="section {{mode === 'orders' ? 'orders-section' : ''}}">

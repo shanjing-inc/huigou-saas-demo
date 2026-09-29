@@ -563,11 +563,11 @@ Page({
                     wx.showModal({ title: `${kind}复制成功`, content: prompt || `已复制${kind}，请打开${platformLabels[platform] || platform || "购物平台"}继续购买。`, showCancel: false });
                 },
                 fail: () => {
-                    if (isCurrent()) this.setData({ error: `${kind}复制失败，请重试。` });
+                    if (isCurrent()) this.setData({ error: `${kind}复制失败，请重新点击商品重试。` });
                 },
             });
         } catch {
-            if (isCurrent()) this.setData({ error: `${kind}复制失败，请重试。` });
+            if (isCurrent()) this.setData({ error: `${kind}复制失败，请重新点击商品重试。` });
         }
     },
 
