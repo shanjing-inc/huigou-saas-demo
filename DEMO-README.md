@@ -51,7 +51,7 @@ DEMO_LAN_HOST=192.168.1.10
 
 | 现象 | 怎么处理 |
 | --- | --- |
-| 提示后端未启动 | 确认终端仍在运行，点击「重试加载」。改过 `DEMO_PORT` 时，同步修改 `BACKEND_BASE` 中的端口并重新编译；真机还需使用电脑私网 IP。 |
+| 提示后端未启动或未配置 | 先看后端终端打印的监听地址和页面显示的 `/api/status` 请求地址，**两者必须一致**。设置了 `DEMO_LAN_HOST` 后，后端只监听该私网 IP，不再监听 `127.0.0.1`；把子包页面顶部的 `BACKEND_BASE` 改为该 IP 和 `DEMO_PORT`，重新编译后点「重试加载」。不要误连另一实例的 8787 端口。 |
 | 更新后仍是旧行为 | 停止占用 8787 端口的旧后端，再启动。状态响应应有 `supportsAccountManagement: true`。 |
 | 登录或收益统计调用失败 | 确认目标 SaaS 已启用 `/api/graphql/partner`，更新并重启本机后端；旧 `/api/graphql/application` 不再提供服务。`DEMO_API_BASE_URL` 仍填写站点根地址。 |
 
