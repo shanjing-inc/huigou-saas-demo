@@ -93,6 +93,24 @@ test("failed automatic login waits for a retry", async () => {
     assert.equal(page.data.profile.memberId, 42);
 });
 
+test("automatic login loads the selected orders tab after an offline navigation", async () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.connected = false;
+    page.changeTab({ currentTarget: { dataset: { mode: "orders" } } });
+    assert.equal(page.data.mode, "orders");
+    assert.equal(requests.length, 0);
+    page.onShow();
+    requests[0].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
+    requests[0].complete();
+    requests[1].success({ statusCode: 200, data: { session: "new-session", profile: { memberId: 7 } } });
+    await flush();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/orders");
+    requests[2].success({ statusCode: 200, data: { data: { items: [], hasMore: false } } });
+    await flush();
+    assert.equal(page.data.loaded, true);
+});
+
 test("old backend status blocks account page and recovers after a restart", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
@@ -291,7 +309,7 @@ test("orders show real summary amounts without redundant decimal zeros or expand
     assert.equal(page.data.mode, "profile");
 });
 
-test("wallet switches periods, paginates only real buckets, and history stays in the home tabs", async () => {
+test("wallet switches periods, paginates only real buckets, and history opens from profile", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.profile = { memberId: 99, money: "1.00", pendingMoney: "2.00", withdrawalMoney: "3.00" };
@@ -315,6 +333,8 @@ test("wallet switches periods, paginates only real buckets, and history stays in
     await flush();
     assert.equal(page.data.walletLoaded, true);
     assert.equal(page.data.walletStats.length, 0);
+    page.backToProfile();
+    assert.equal(page.data.mode, "profile");
     page.changeTab({ currentTarget: { dataset: { mode: "withdrawals" } } });
     assert.equal(requests[3].url, "http://127.0.0.1:8787/api/withdrawals");
     requests[3].success({ statusCode: 200, data: { data: { items: [], hasMore: false } } });
@@ -324,7 +344,7 @@ test("wallet switches periods, paginates only real buckets, and history stays in
 test("wallet withdrawal opens account management only through withdrawal and preserves entered amount", async () => {
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
     const wallet = markup.split('<view wx:elif="{{mode === \'wallet\'}}"')[1].split('<view wx:elif="{{mode === \'accounts\'}}"')[0];
-    assert.match(markup, /data-mode="withdrawals" bindtap="changeTab">提现记录<\/view>/);
+    assert.match(markup, /data-mode="withdrawals" bindtap="changeTab"[^>]*>.*提现记录<\/text>/);
     assert.match(wallet, /bindtap="openWithdrawal">去提现/);
     assert.doesNotMatch(wallet, /提现记录 ›|bindtap="openAccounts"|<button[^>]*>申请提现<\/button>/);
     const withdrawal = markup.split('<view wx:elif="{{mode === \'withdraw\'}}"')[1].split('<view wx:elif="{{mode === \'promote\'}}"')[0];
@@ -494,4 +514,46 @@ test("withdrawal requires account selection and user confirmation without a swit
     await flush();
     assert.match(page.data.error, /勿重复提交/);
     assert.equal(requests.length, 4);
+});
+
+test("shopping, orders and profile are the only root tabs; profile retains the real record entries", async () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const nav = markup.split('<view wx:if="{{mode === \'promote\' || mode === \'orders\' || mode === \'profile\'}}" class="bottom-nav">')[1];
+    assert.ok(nav);
+    assert.match(nav, /data-mode="promote" bindtap="changeTab"/);
+    assert.match(nav, /data-mode="orders" bindtap="changeTab"/);
+    assert.match(nav, /data-mode="profile" bindtap="changeTab"/);
+    assert.doesNotMatch(nav, /data-mode="(?:wallet|bills|withdrawals)"/);
+    assert.match(markup, /data-mode="wallet" bindtap="changeTab"/);
+    assert.match(markup, /data-mode="bills" bindtap="changeTab"/);
+    assert.match(markup, /data-mode="withdrawals" bindtap="changeTab"/);
+
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    assert.equal(page.data.mode, "promote");
+    page.changeTab({ currentTarget: { dataset: { mode: "orders" } } });
+    assert.equal(page.data.mode, "orders");
+    assert.equal(requests[0].url, "http://127.0.0.1:8787/api/orders");
+    requests[0].success({ statusCode: 200, data: { data: { items: [], hasMore: false } } });
+    await flush();
+    page.changeTab({ currentTarget: { dataset: { mode: "profile" } } });
+    assert.equal(page.data.mode, "profile");
+    page.changeTab({ currentTarget: { dataset: { mode: "withdrawals" } } });
+    assert.equal(requests[1].url, "http://127.0.0.1:8787/api/withdrawals");
+    requests[1].success({ statusCode: 200, data: { data: { items: [], hasMore: false } } });
+    await flush();
+    page.backToProfile();
+    assert.equal(page.data.mode, "profile");
+    page.changeTab({ currentTarget: { dataset: { mode: "bills" } } });
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/bills");
+    requests[2].success({ statusCode: 200, data: { data: { items: [], hasMore: false } } });
+    await flush();
+    page.backToProfile();
+    assert.equal(page.data.mode, "profile");
+    page.changeTab({ currentTarget: { dataset: { mode: "wallet" } } });
+    assert.equal(requests[3].url, "http://127.0.0.1:8787/api/wallet");
+    requests[3].success({ statusCode: 200, data: { data: { profile: {}, items: [], hasMore: false } } });
+    await flush();
+    page.backToProfile();
+    assert.equal(page.data.mode, "profile");
 });

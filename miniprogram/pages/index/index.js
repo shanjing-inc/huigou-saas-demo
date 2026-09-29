@@ -1,5 +1,5 @@
 const BASE = "http://127.0.0.1:8787";
-const sections = ["profile", "promote", "orders", "wallet", "bills", "withdrawals"];
+const sections = ["promote", "orders", "profile", "wallet", "bills", "withdrawals"];
 const walletPeriods = ["day", "month", "year"];
 const accountLabels = { 1: "支付宝", 2: "微信", 3: "银行卡" };
 const emptyAccountForm = () => ({ type: 1, name: "", account: "", identificationCode: "", bankName: "" });
@@ -48,7 +48,7 @@ Page({
         backendReachable: false,
         backendChecked: false,
         checkingBackend: false,
-        mode: "profile",
+        mode: "promote",
         connected: false,
         busy: false,
         error: "",
@@ -176,13 +176,14 @@ Page({
             });
         }).then(() => {
             if (this.data.connected && this.data.mode === "wallet") this.loadWallet(1);
+            if (this.data.connected && ["orders", "bills", "withdrawals"].includes(this.data.mode)) this.loadRecords(1);
         });
     },
 
     changeTab(event) {
         if (this.data.busy) return;
         const mode = event.currentTarget.dataset.mode;
-        if (!sections.includes(mode)) return;
+        if (!sections.includes(mode) || mode === this.data.mode) return;
         this.setData({ mode, error: "", notice: "", records: [], page: 1, hasMore: false, loaded: false });
         if (["orders", "bills", "withdrawals"].includes(mode) && this.data.connected) this.loadRecords(1);
         if (mode === "wallet" && this.data.connected) {

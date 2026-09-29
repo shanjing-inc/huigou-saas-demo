@@ -1,41 +1,30 @@
-<view class="shell {{mode === 'orders' || mode === 'wallet' || mode === 'accounts' || mode === 'withdraw' ? 'showcase-shell' : ''}}">
+<view class="shell showcase-shell {{mode === 'promote' || mode === 'orders' || mode === 'profile' ? 'root-shell' : ''}}">
     <view class="app-nav" style="padding-top: {{statusBarHeight}}px">
-        <view wx:if="{{mode === 'orders' || mode === 'wallet' || mode === 'accounts' || mode === 'withdraw'}}" class="nav-back" role="button" aria-label="返回上级页面" bindtap="backToProfile">‹</view>
-        <text class="nav-title">{{mode === 'orders' ? '订单列表' : mode === 'wallet' ? '我的钱包' : mode === 'accounts' ? '收款账号' : mode === 'withdraw' ? '申请提现' : '返利联调'}}</text>
+        <view wx:if="{{mode !== 'promote' && mode !== 'orders' && mode !== 'profile'}}" class="nav-back" role="button" aria-label="返回上级页面" bindtap="backToProfile">‹</view>
+        <text class="nav-title">{{mode === 'promote' ? '惠购网' : mode === 'orders' ? '我的订单' : mode === 'profile' ? '我的' : mode === 'wallet' ? '我的钱包' : mode === 'accounts' ? '收款账号' : mode === 'withdraw' ? '申请提现' : mode === 'bills' ? '我的账单' : '提现记录'}}</text>
     </view>
-    <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="topline"><text class="mark">HUIGOU / PARTNER</text><text class="demo-tag">惠购 · DEMO</text></view>
-    <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="page-title">返利联调</view>
-    <view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="subtitle">当前成员的推广与返利</view>
-    <view wx:else class="showcase-label">惠购 · DEMO</view>
 
     <view wx:if="{{error}}" class="alert" role="alert">{{error}}</view>
     <view wx:if="{{notice}}" class="notice">{{notice}}</view>
 
-    <view wx:if="{{!connected}}" class="section">
+    <view wx:if="{{!connected}}" class="section connection-section">
         <view wx:if="{{!backendChecked || checkingBackend || busy}}" class="empty">正在加载成员资料…</view>
         <button wx:else class="quiet" bindtap="checkBackend">重试加载</button>
     </view>
 
     <block wx:else>
-        <scroll-view wx:if="{{mode !== 'orders' && mode !== 'wallet' && mode !== 'accounts' && mode !== 'withdraw'}}" class="tabs" scroll-x="true" enable-flex="true">
-            <view class="tabs-inner">
-                <view class="tab {{mode === 'profile' ? 'active' : ''}}" data-mode="profile" bindtap="changeTab">成员</view>
-                <view class="tab {{mode === 'promote' ? 'active' : ''}}" data-mode="promote" bindtap="changeTab">推广</view>
-                <view class="tab {{mode === 'orders' ? 'active' : ''}}" data-mode="orders" bindtap="changeTab">订单</view>
-                <view class="tab {{mode === 'wallet' ? 'active' : ''}}" data-mode="wallet" bindtap="changeTab">钱包</view>
-                <view class="tab {{mode === 'bills' ? 'active' : ''}}" data-mode="bills" bindtap="changeTab">账单</view>
-                <view class="tab {{mode === 'withdrawals' ? 'active' : ''}}" data-mode="withdrawals" bindtap="changeTab">提现记录</view>
+        <view wx:if="{{mode === 'profile'}}" class="profile-page">
+            <view class="member-identity"><view class="member-avatar">惠</view><view class="member-name"><text>成员 #{{profile.memberId}}</text><text class="member-meta">{{profile.role || '当前成员'}} · 惠购 DEMO</text></view></view>
+            <view class="member-balance" role="button" aria-label="查看我的钱包" data-mode="wallet" bindtap="changeTab">
+                <view class="member-balance-head"><text>我的钱包</text><text>查看钱包 ›</text></view>
+                <view class="member-balance-values"><view><text class="balance-value">{{profile.money != null ? profile.money : '—'}}</text><text class="balance-label">可用余额 (元)</text></view><view><text class="balance-value">{{profile.pendingMoney != null ? profile.pendingMoney : '—'}}</text><text class="balance-label">待结算及提现中 (元)</text></view></view>
             </view>
-        </scroll-view>
-
-        <view wx:if="{{mode === 'profile'}}" class="section">
-            <view class="section-head">成员资料</view>
-            <view class="stat"><text>成员 ID</text><text>{{profile.memberId}}</text></view>
-            <view class="stat"><text>Team ID</text><text>{{profile.teamId}}</text></view>
-            <view class="stat"><text>角色</text><text>{{profile.role}}</text></view>
-            <view class="stat"><text>可用余额</text><text>¥ {{profile.money}}</text></view>
-            <view class="stat"><text>待结算</text><text>¥ {{profile.pendingMoney}}</text></view>
-            <view class="stat"><text>累计提现</text><text>¥ {{profile.withdrawalMoney}}</text></view>
+            <view class="member-links">
+                <view class="member-link" role="button" data-mode="wallet" bindtap="changeTab"><text class="member-link-icon">¥</text><text>钱包与收益</text><text class="link-arrow">›</text></view>
+                <view class="member-link" role="button" data-mode="bills" bindtap="changeTab"><text class="member-link-icon">≡</text><text>我的账单</text><text class="link-arrow">›</text></view>
+                <view class="member-link" role="button" data-mode="withdrawals" bindtap="changeTab"><text class="member-link-icon">↗</text><text>提现记录</text><text class="link-arrow">›</text></view>
+            </view>
+            <view class="member-details"><view class="member-details-title">成员资料</view><view class="stat"><text>成员 ID</text><text>{{profile.memberId}}</text></view><view class="stat"><text>Team ID</text><text>{{profile.teamId}}</text></view><view class="stat"><text>角色</text><text>{{profile.role}}</text></view><view class="stat"><text>累计提现</text><text>¥ {{profile.withdrawalMoney}}</text></view></view>
         </view>
 
         <view wx:elif="{{mode === 'wallet'}}" class="wallet-section">
@@ -120,10 +109,13 @@
             <view class="wallet-hint">提交会占用当前成员的实际可用余额；如刷新失败，请先核对提现记录，勿重复提交。</view>
         </view>
 
-        <view wx:elif="{{mode === 'promote'}}" class="section">
-            <view class="section-head">分享物料 <text class="eyebrow">PARSE → LINK</text></view>
-            <textarea class="material-input" maxlength="4096" placeholder="粘贴分享文案或商品链接" value="{{content}}" bindinput="updateContent" />
-            <button class="primary" loading="{{busy}}" disabled="{{busy || !content}}" bindtap="parse">解析内容</button>
+        <view wx:elif="{{mode === 'promote'}}" class="section shopping-section">
+            <view class="shopping-search">
+                <view class="shopping-steps"><text><text class="step-number">1</text> 复制商品链接</text><text><text class="step-number">2</text> 粘贴商品链接</text><text><text class="step-number">3</text> 解析商品</text></view>
+                <view class="shopping-platforms">支持淘宝、京东、拼多多、唯品会、抖音、1688 等商品链接</view>
+                <textarea class="material-input" maxlength="4096" placeholder="粘贴分享文案或商品链接" value="{{content}}" bindinput="updateContent" />
+                <button class="primary" loading="{{busy}}" disabled="{{busy || !content}}" bindtap="parse">解析商品</button>
+            </view>
             <view wx:if="{{candidates.length}}" class="subhead">候选内容 · {{candidates.length}}</view>
             <view wx:for="{{candidates}}" wx:key="index" class="candidate {{selectedIndex === index ? 'chosen' : ''}}" data-index="{{index}}" bindtap="selectCandidate">
                 <view class="candidate-photo">
@@ -208,4 +200,9 @@
         </view>
     </block>
     <view class="footer">正式服务 · 账号和提现操作影响实际数据</view>
+    <view wx:if="{{mode === 'promote' || mode === 'orders' || mode === 'profile'}}" class="bottom-nav">
+        <view class="bottom-tab {{mode === 'promote' ? 'active' : ''}}" role="button" aria-label="网购" data-mode="promote" bindtap="changeTab"><image src="../../images/tab-shop{{mode === 'promote' ? '-active' : ''}}.svg" /><text>网购</text></view>
+        <view class="bottom-tab {{mode === 'orders' ? 'active' : ''}}" role="button" aria-label="订单" data-mode="orders" bindtap="changeTab"><image src="../../images/tab-orders{{mode === 'orders' ? '-active' : ''}}.svg" /><text>订单</text></view>
+        <view class="bottom-tab {{mode === 'profile' ? 'active' : ''}}" role="button" aria-label="我的" data-mode="profile" bindtap="changeTab"><image src="../../images/tab-profile{{mode === 'profile' ? '-active' : ''}}.svg" /><text>我的</text></view>
+    </view>
 </view>
