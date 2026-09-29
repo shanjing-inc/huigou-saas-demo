@@ -65,7 +65,6 @@ Page({
         editingAccountId: null,
         clearIdentity: false,
         accountForm: emptyAccountForm(),
-        accountsReturnMode: "wallet",
         withdrawalAmount: "",
         withdrawalAccountId: null,
         content: "",
@@ -194,14 +193,15 @@ Page({
 
     backToProfile() {
         if (this.data.busy) return;
-        const mode = this.data.mode === "accounts" ? this.data.accountsReturnMode : this.data.mode === "withdraw" ? "wallet" : "profile";
-        this.setData({ mode, error: "", notice: "", accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "" });
+        const mode = this.data.mode === "accounts" ? "withdraw" : this.data.mode === "withdraw" ? "wallet" : "profile";
+        this.setData({ mode, error: "", notice: "", accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false,
+            ...(mode !== "withdraw" ? { withdrawalAmount: "" } : {}) });
         if (mode === "withdraw") this.loadAccounts(true);
     },
 
     openAccounts() {
-        if (this.data.busy || !this.data.connected || !this.data.backendSupportsAccounts) return;
-        this.setData({ mode: "accounts", accountsReturnMode: this.data.mode === "withdraw" ? "withdraw" : "wallet", error: "", notice: "", accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false });
+        if (this.data.busy || !this.data.connected || !this.data.backendSupportsAccounts || this.data.mode !== "withdraw") return;
+        this.setData({ mode: "accounts", error: "", notice: "", accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false });
         this.loadAccounts();
     },
 

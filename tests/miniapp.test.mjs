@@ -111,6 +111,7 @@ test("old backend status blocks account page and recovers after a restart", asyn
     requests[1].complete();
     assert.equal(page.data.backendSupportsAccounts, true);
     assert.equal(page.data.error, "");
+    page.data.mode = "withdraw";
     page.openAccounts();
     assert.equal(requests[2].url, "http://127.0.0.1:8787/api/accounts");
     requests[2].success({ statusCode: 200, data: { data: [] } });
@@ -121,6 +122,7 @@ test("missing account route suggests restarting the local backend", async () => 
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.backendSupportsAccounts = true;
+    page.data.mode = "withdraw";
     page.openAccounts();
     requests[0].success({ statusCode: 404, data: { code: "NOT_FOUND", message: "接口不存在。" } });
     await flush();
@@ -289,7 +291,7 @@ test("orders show real summary amounts without redundant decimal zeros or expand
     assert.equal(page.data.mode, "profile");
 });
 
-test("wallet switches periods, paginates only real buckets, and opens withdrawal history", async () => {
+test("wallet switches periods, paginates only real buckets, and history stays in the home tabs", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.profile = { memberId: 99, money: "1.00", pendingMoney: "2.00", withdrawalMoney: "3.00" };
@@ -317,6 +319,49 @@ test("wallet switches periods, paginates only real buckets, and opens withdrawal
     assert.equal(requests[3].url, "http://127.0.0.1:8787/api/withdrawals");
     requests[3].success({ statusCode: 200, data: { data: { items: [], hasMore: false } } });
     await flush();
+});
+
+test("wallet withdrawal opens account management only through withdrawal and preserves entered amount", async () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const wallet = markup.split('<view wx:elif="{{mode === \'wallet\'}}"')[1].split('<view wx:elif="{{mode === \'accounts\'}}"')[0];
+    assert.match(markup, /data-mode="withdrawals" bindtap="changeTab">提现记录<\/view>/);
+    assert.match(wallet, /bindtap="openWithdrawal">去提现/);
+    assert.doesNotMatch(wallet, /提现记录 ›|bindtap="openAccounts"|<button[^>]*>申请提现<\/button>/);
+    const withdrawal = markup.split('<view wx:elif="{{mode === \'withdraw\'}}"')[1].split('<view wx:elif="{{mode === \'promote\'}}"')[0];
+    assert.match(withdrawal, /bindtap="openAccounts">管理收款账号/);
+    assert.ok(withdrawal.indexOf("管理收款账号") < withdrawal.indexOf("提现金额（元）"));
+
+    const requests = [];
+    const page = mountPage((options) => requests.push(options));
+    page.data.backendSupportsAccounts = true;
+    page.data.mode = "wallet";
+    page.openAccounts();
+    assert.equal(page.data.mode, "wallet");
+    assert.equal(requests.length, 0);
+    page.openWithdrawal();
+    assert.equal(page.data.mode, "withdraw");
+    requests[0].success({ statusCode: 200, data: { data: [{ id: 7, type: 1, isDefault: true }] } });
+    await flush();
+    requests[1].success({ statusCode: 200, data: { data: { money: "10.00" } } });
+    await flush();
+    page.updateWithdrawalAmount({ detail: { value: "3.50" } });
+    page.openAccounts();
+    assert.equal(requests[2].url, "http://127.0.0.1:8787/api/accounts");
+    requests[2].success({ statusCode: 200, data: { data: [{ id: 8, type: 2, isDefault: true }] } });
+    await flush();
+    page.backToProfile();
+    assert.equal(page.data.mode, "withdraw");
+    assert.equal(page.data.withdrawalAmount, "3.50");
+    assert.equal(requests[3].url, "http://127.0.0.1:8787/api/accounts");
+    requests[3].success({ statusCode: 200, data: { data: [{ id: 8, type: 2, isDefault: true }] } });
+    await flush();
+    requests[4].success({ statusCode: 200, data: { data: { money: "10.00" } } });
+    await flush();
+    assert.equal(page.data.withdrawalAccountId, 8);
+    assert.equal(requests.every((request) => !["/api/withdraw", "/api/createAccount", "/api/updateAccount"].some((path) => request.url.endsWith(path))), true);
+    page.backToProfile();
+    assert.equal(page.data.mode, "wallet");
+    assert.equal(page.data.withdrawalAmount, "");
 });
 
 test("wallet session expiration clears balances and statistics", async () => {
@@ -361,7 +406,7 @@ test("account management lists masked accounts and edits via fixed routes", asyn
     const requests = [];
     const page = mountPage((options) => requests.push(options), () => {}, (options) => options.success({ confirm: true }));
     page.data.backendSupportsAccounts = true;
-    page.data.mode = "wallet";
+    page.data.mode = "withdraw";
     page.openAccounts();
     assert.equal(requests[0].url, "http://127.0.0.1:8787/api/accounts");
     requests[0].success({ statusCode: 200, data: { data: [{ id: 7, type: 3, name: "测***", account: "****1234", isDefault: true }] } });
