@@ -7,9 +7,11 @@ description: 接入惠购 Saas 版 GraphQL API，查询接口文档、实现签�
 
 按任务读取随 skill 一起提供的文档，无需访问服务端源码：
 
-- [接入说明](https://github.com/shanjing-inc/huigou-saas-demo/blob/master/README.md)：支持的功能、业务规则、登录顺序，以及浏览器 / 插件查询 GraphQL 文档的方法。首次接入或解释业务时读。
+- [接入说明](https://github.com/shanjing-inc/huigou-saas-demo/blob/master/README.md)：接入入口和在线 GraphQL 文档的打开方法。
+- [业务规则](references/business.md)：组织、Team、成员身份、Token、余额及提现流程。首次接入时读。
 - [功能与接口](references/capabilities.md)：按用户需求选择接口、确认调用身份和先后顺序。开发具体功能时读。
-- [签名与请求示例](references/requests.md)：实现应用签名或调用接口时读。
+- [签名与登录](references/requests.md)：完整签名规则、固定校验样例和登录代码；复用 [Node.js 签名函数](scripts/signature.mjs)。
+- [业务调用示例](references/examples.md)：商品转链、分页、收益统计和提现处理。按所需功能读取。
 - [商品样例](references/test-materials.md)：需要商品解析、查询或转链联调时读。
 - [接口错误处理](references/errors.md)：遇到鉴权、参数、上游或资金请求异常时读。
 - 运行小程序 Demo 时，按 [Demo 启动说明](https://github.com/shanjing-inc/huigou-saas-demo/blob/master/DEMO-README.md) 操作。

@@ -8,7 +8,7 @@
 
 **用户登录 → 查询商品 → 生成推广链接 → 用户下单 → 订单结算 → 申请提现**
 
-支持商城：京东、淘宝、1688、唯品会、抖音。
+可接入京东、淘宝、1688 等商城；实际可用范围以组织开通的商城和服务能力为准。
 
 打款：实际打款需接入方人工转账。
 
@@ -16,7 +16,7 @@
 
 1. **准备接入配置。** 向对接人取得接口域名、App Key/Secret、组织 ID 和 Team ID；已有配置可直接使用。
 2. **让后端登录。** 先认证自己的用户，再用 OpenID、组织 ID、Team ID 调用 `login`，取得成员 Token（用户身份凭证）。密钥和 Token 只保存在可信后端，不放进小程序、网页或聊天。
-3. **调用业务接口。**
+3. **调用业务接口。** 用成员 Token 查询商品、转链、查订单和申请提现；用应用签名管理 Team、查询组织收益和处理提现。
 
 我们负责开通服务、商城能力并提供接口；你负责用户认证、页面和后端集成。注意：Demo 使用配置中的固定 OpenID，面向用户的应用需要按实际登录用户取得 OpenID。
 
@@ -29,24 +29,15 @@
 
 浏览器访问上述地址，可直接进入网页版 Yoga GraphiQL 浏览接口。也可以使用 Chrome 插件 [Altair GraphQL Client](https://chromewebstore.google.com/detail/altair-graphql-client/flnheeellpciglgpaodhkhmapeljopja) 导入查看。
 
-开发时查阅 [签名与请求示例](skills/huigou-saas-skills/references/requests.md)；商品联调可用 [商品样例链接](skills/huigou-saas-skills/references/test-materials.md)。
+按需要阅读，每类内容只在一处维护：
 
-功能与调用顺序见 [功能与接口](skills/huigou-saas-skills/references/capabilities.md)。
+- [功能与接口](skills/huigou-saas-skills/references/capabilities.md)：全部外部接口及调用身份。
+- [业务规则](skills/huigou-saas-skills/references/business.md)：组织、Team、成员、余额和提现流程。
+- [签名与登录](skills/huigou-saas-skills/references/requests.md)：完整签名规则和可复用函数。
+- [业务调用示例](skills/huigou-saas-skills/references/examples.md)：商品转链、分页、收益统计和提现处理。
+- [错误处理](skills/huigou-saas-skills/references/errors.md) / [商品样例](skills/huigou-saas-skills/references/test-materials.md)：排错与联调。
 
-### Demo 功能与接口
-
-下表列出 Demo 已使用的接口。应用接口用密钥签名，成员接口用登录得到的 Token；具体参数、返回字段及更多能力请查当前服务的 GraphQL 文档。
-
-| 想做什么 | 调用身份与顺序 |
-| --- | --- |
-| 登录、查看资料 | 应用调用 `login` → 成员调用 `getProfile`，确认成员和 Team。 |
-| 把分享内容变成推广链接 | 成员：`parsePromotionMaterial` → 选择解析结果 → 按需 `getPromotionItem` → `createPromotionLink`。 |
-| 查看订单和账单 | 成员：`listOrders` / `listBills`；按分页继续读取。 |
-| 查看余额和收益 | 成员用 `getProfile` 查余额；应用用 `listRevenueStatistic` 查收益统计，由后端绑定当前成员 ID。 |
-| 管理收款账号 | 成员：`listWithdrawalAccounts` → 按需 `createWithdrawalAccount` / `updateWithdrawalAccount` / `deleteWithdrawalAccount`。 |
-| 申请提现、查看进度 | 成员：`getProfile` → `listWithdrawalAccounts` → 核对账号和金额 → `requestWithdrawal` → `listWithdrawals`。 |
-
-遇到报错时查 [接口错误处理](skills/huigou-saas-skills/references/errors.md)。
+这里说明接入方法；完整参数、返回字段及枚举以在线 Schema 为准。Demo 只演示其中一部分功能。
 
 ## 让 AI 帮你开发
 
