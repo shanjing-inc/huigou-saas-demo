@@ -116,14 +116,14 @@
                 <textarea class="material-input" maxlength="4096" placeholder="粘贴分享文案或商品链接" value="{{content}}" bindinput="updateContent" />
                 <button class="primary" loading="{{busy}}" disabled="{{busy || !content}}" bindtap="parse">解析商品</button>
             </view>
-            <view wx:if="{{candidates.length}}" class="subhead">候选内容 · {{candidates.length}}</view>
-            <view wx:for="{{candidates}}" wx:key="index" class="candidate {{selectedIndex === index ? 'chosen' : ''}} {{busy ? 'disabled' : ''}}" role="button" aria-label="转链 {{item.preview.title || item.detail.itemTitle || '候选内容'}}" data-index="{{index}}" bindtap="selectCandidate">
+            <view wx:if="{{candidates.length}}" class="subhead">解析结果 · {{candidates.length}}</view>
+            <view wx:for="{{candidates}}" wx:key="index" class="candidate {{selectedIndex === index ? 'chosen' : ''}} {{busy ? 'disabled' : ''}}" role="button" aria-label="转链 {{item.preview.title || item.detail.itemTitle || '解析结果'}}" data-index="{{index}}" bindtap="selectCandidate">
                 <view class="candidate-photo">
                     <image wx:if="{{item.preview.imageUrl && !item.imageFailed}}" src="{{item.preview.imageUrl}}" mode="aspectFill" lazy-load="true" data-index="{{index}}" data-version="{{item.version}}" data-image="{{item.preview.imageUrl}}" binderror="candidateImageError" />
                     <view wx:else class="photo-fallback">暂无图片</view>
                 </view>
                 <view class="candidate-body">
-                    <view class="candidate-title">{{item.preview.title || item.detail.itemTitle || (item.type === 'goods' || item.type === 'life' ? '商品信息待补充' : '候选物料')}}</view>
+                    <view class="candidate-title">{{item.preview.title || item.detail.itemTitle || (item.type === 'goods' || item.type === 'life' ? '商品信息待补充' : '解析结果')}}</view>
                     <view wx:if="{{item.preview.price || item.preview.coupon}}" class="candidate-offer">
                         <text wx:if="{{item.preview.price}}" class="candidate-price">¥{{item.preview.price}}</text>
                         <text wx:if="{{item.preview.coupon}}" class="candidate-coupon">{{item.preview.coupon}} 元券</text>
@@ -139,7 +139,7 @@
                 </view>
             </view>
             <block wx:if="{{selected}}">
-                <view class="subhead">已选候选 · {{selected.platform}}</view>
+                <view class="subhead">已选解析结果 · {{selected.platform}}</view>
                 <view class="type-row">
                     <view class="type {{selectedType === 'goods' ? 'selected' : ''}}" data-type="goods" bindtap="setType">商品</view>
                     <view class="type {{selectedType === 'activity' ? 'selected' : ''}}" data-type="activity" bindtap="setType">活动</view>

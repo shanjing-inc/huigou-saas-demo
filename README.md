@@ -27,7 +27,7 @@ pnpm backend
 
 在微信开发者工具中导入仓库根目录，使用自己可用的 AppID。在本地设置中关闭合法域名校验（`project.private.config.json` 的 `setting.urlCheck: false`），让模拟器能访问本机后端；不要上传这份配置。
 
-打开页面后会自动加载当前成员，无需点击连接。随后粘贴[商品样例链接](skills/huigou-saas-skills/references/test-materials.md)，选择候选并生成推广链接。订单和钱包页展示当前成员的实际数据，没有记录时显示空列表。
+打开页面后会自动加载当前成员，无需点击连接。随后粘贴[商品样例链接](skills/huigou-saas-skills/references/test-materials.md)，选择解析结果并生成推广链接。订单和钱包页展示当前成员的实际数据，没有记录时显示空列表。
 
 ## 使用时注意
 

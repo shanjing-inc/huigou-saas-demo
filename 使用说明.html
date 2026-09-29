@@ -62,7 +62,7 @@
 <p>预估返利还未到账，只有<strong>可用余额</strong>能申请提现。<code>pendingMoney</code>（待结算）包含未结算返利和在途提现本金；收益统计也不是钱包余额。</p>
 <h2 id="section-2">怎么接入</h2>
 <ol>
-<li><strong>准备接入配置。</strong> 获取正式服务域名和应用凭证。向对接人取得 App Key/Secret、组织 ID 和 Team ID；组织表示授权范围，Team 表示成员归属。</li>
+<li><strong>准备接入配置。</strong> Demo 使用正式服务域名和应用凭证。向对接人取得 App Key/Secret、组织 ID 和 Team ID；已有配置可直接使用。组织表示授权范围，Team 表示成员归属。</li>
 <li><strong>让后端登录。</strong> 先认证自己的用户，再用可信 OpenID、组织 ID、Team ID 调用 <code>login</code>，取得成员 Token（用户身份凭证）。密钥和 Token 只保存在可信后端，不放进小程序、网页或聊天。</li>
 <li><strong>确认身份，再接业务。</strong> 用 Token 调用 <code>getProfile</code>，核对成员和钱包；之后按需接商品、订单或提现功能。切换组织或 Team 时重新登录。</li>
 </ol>
@@ -77,7 +77,7 @@
 <p>字段和参数以所连接服务的 Schema（接口定义）为准。开发时查阅 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/requests.md">签名与请求示例</a>；商品联调可用 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/test-materials.md">商品样例链接</a>。</p>
 <p>功能与调用顺序见 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/capabilities.md">功能与接口</a>。</p>
 <h2 id="section-3">功能与接口</h2>
-<p>应用接口用密钥签名，成员接口用登录得到的 Token；具体参数、返回字段及更多能力请查当前服务的 GraphQL 文档。</p>
+<p>下表列出 Demo 已使用的接口。应用接口用密钥签名，成员接口用登录得到的 Token；具体参数、返回字段及更多能力请查当前服务的 GraphQL 文档。</p>
 <table>
 <thead>
 <tr>
@@ -91,7 +91,7 @@
 </tr>
 <tr>
 <td>把分享内容变成推广链接</td>
-<td>成员：<code>parsePromotionMaterial</code> → 选择候选 → 按需 <code>getPromotionItem</code> → <code>createPromotionLink</code>。</td>
+<td>成员：<code>parsePromotionMaterial</code> → 选择解析结果 → 按需 <code>getPromotionItem</code> → <code>createPromotionLink</code>。</td>
 </tr>
 <tr>
 <td>查看订单和账单</td>
@@ -110,7 +110,7 @@
 <td>成员：<code>getProfile</code> → <code>listWithdrawalAccounts</code> → 核对账号和金额 → <code>requestWithdrawal</code> → <code>listWithdrawals</code>。</td>
 </tr>
 </tbody></table>
-<p>商品详情优先用解析出的商品 ID，转链用候选商品链接。账号变更和提现会影响实际数据，只执行用户已授权的操作；提现结果不明时先查记录。</p>
+<p>商品详情优先用解析出的商品 ID，转链用解析结果中的商品链接。账号变更和提现会影响实际数据，只执行用户已授权的操作；提现结果不明时先查记录。</p>
 <p>遇到报错时查 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/errors.md">接口错误处理</a>。</p>
 <h2 id="section-4">让 AI 帮你开发</h2>
 <p>先确保 AI 能访问 <a href="https://github.com/shanjing-inc/huigou-saas-demo">Demo 仓库</a>，再复制下面的指令。</p>

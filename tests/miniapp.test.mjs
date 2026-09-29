@@ -38,6 +38,22 @@ test("order and wallet views display only supported source metrics", () => {
     assert.match(styles, /\.copy-order \{[^}]+align-items: center;[^}]+justify-content: center;/);
 });
 
+test("parse screens and prompts describe results without changing candidate data", async () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    assert.match(markup, /解析结果 · {{candidates.length}}/);
+    assert.match(markup, /已选解析结果/);
+    assert.doesNotMatch(markup, /候选/);
+
+    const page = mountPage((options) => options.success({ statusCode: 200, data: { data: [] } }));
+    page.data.content = "share";
+    page.parse();
+    await flush();
+    assert.equal(page.data.notice, "未解析出可用结果，请换一条有效的分享内容。");
+    page.createLink();
+    await flush();
+    assert.match(page.data.error, /选择一条有效的解析结果/);
+});
+
 test("opening the page automatically logs in when the backend starts, without a manual connection", async () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
@@ -312,6 +328,7 @@ test("candidate cards load at most two details at once and keep failed items sel
     page.data.content = "share";
     page.parse();
     await flush();
+    assert.equal(page.data.notice, "点击解析结果即可转链。");
     assert.equal(pending.length, 2);
     assert.equal(page.data.candidates[0].previewState, "loading");
     page.selectCandidate({ currentTarget: { dataset: { index: 1 } } });
