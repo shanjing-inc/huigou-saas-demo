@@ -73,7 +73,7 @@
 <li><code>/api/graphql/application</code>：应用接口，用 App Key、时间戳和签名鉴权。</li>
 <li><code>/api/graphql/member</code>：成员接口，用 <code>Authorization: Bearer &lt;Token&gt;</code> 鉴权。</li>
 </ul>
-<p>浏览器直接打开可进入 <strong>Yoga GraphiQL</strong>，在 Docs 中查看字段。GraphQL 文档插件也可向同一地址发送 POST JSON 自省查询（<code>__schema</code> / <code>__type</code>）导入文档。文档元数据可匿名读取，业务调用仍需鉴权和授权。</p>
+<p>浏览器对上述地址发送 HTML <code>GET</code>，可直接进入 <strong>Yoga GraphiQL</strong>，在 Docs 中查看字段。支持 GraphQL 自省的文档插件/客户端可把同一地址设为 Schema 地址，发送 <code>POST</code> 请求，以 <code>Content-Type: application/json</code> 提交标准自省查询（<code>__schema</code> / <code>__type</code>），通过 JSON 响应导入字段与类型；不要将 GraphiQL 的 HTML 页面当作 JSON Schema 导入。纯 Schema 自省可匿名读取元数据；页面公开不代表业务查询或 Mutation 免鉴权，业务调用仍需相应身份与授权。</p>
 <p>字段和参数以所连接服务的 Schema（接口定义）为准。开发时查阅 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/requests.md">签名与请求示例</a>；商品联调可用 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/test-materials.md">商品样例链接</a>。</p>
 <p>功能与调用顺序见 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/skills/huigou-saas-skills/references/capabilities.md">功能与接口</a>。</p>
 <h2 id="section-3">功能与接口</h2>
