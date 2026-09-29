@@ -99,7 +99,7 @@ query Revenue($memberId: Int!, $period: RevenueStatisticPeriod!, $page: Int!) {
 {"memberId":1,"period":"day","page":1}
 ```
 
-默认最近 30 个业务日，也可传 from / to（YYYY-MM-DD，跨度不超过 366 天）。只返回有数据的日期桶，按日期倒序；统计金额不能代替钱包可用余额。
+默认查询最近 30 个业务日，也可传 from / to（YYYY-MM-DD，跨度不超过 366 天）。结果按日、月或年汇总，只返回有数据的时段，按时间倒序；统计金额不等于钱包可用余额。
 
 ## 提现：申请和人工处理
 
