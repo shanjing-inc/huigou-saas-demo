@@ -68,7 +68,7 @@
 </ol>
 <p>我们负责开通服务、商城能力并提供接口；你负责用户认证、页面和后端集成。Demo 使用配置中的固定 OpenID，面向用户的应用需要按实际登录用户取得 OpenID。</p>
 <h3>去哪里看接口文档</h3>
-<p>在<strong>对接人提供的目标站点</strong>后加以下路径：</p>
+<p>拿到接口域名后，拼接以下路径：</p>
 <ul>
 <li><code>/api/graphql/partner</code>：应用接口，用 App Key、时间戳和签名鉴权；旧 <code>/api/graphql/application</code> 已停用，不提供兼容转发。</li>
 <li><code>/api/graphql/member</code>：成员接口，用 <code>Authorization: Bearer &lt;Token&gt;</code> 鉴权。</li>
