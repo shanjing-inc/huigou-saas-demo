@@ -1,7 +1,7 @@
 // Selection sets track saas/src/graphql/generated/{application,member}-schema.graphql.
 export const operations = Object.freeze({
     login: {
-        endpoint: "application",
+        endpoint: "partner",
         query: `mutation Login($openid: String!, $organizationId: Int!, $teamId: Int!) {
             login(openid: $openid, organizationId: $organizationId, teamId: $teamId) { token memberId }
         }`,
@@ -12,7 +12,7 @@ export const operations = Object.freeze({
         field: "getProfile",
     },
     wallet: {
-        endpoint: "application",
+        endpoint: "partner",
         query: `query Wallet($memberId: Int!, $period: RevenueStatisticPeriod!, $page: Int!, $limit: Int!, $from: String, $to: String) {
             listRevenueStatistic(memberId: $memberId, period: $period, page: $page, limit: $limit, from: $from, to: $to) {
                 hasMore items { date orderCount estimateMemberOrderCommission settledMemberOrderCommission }

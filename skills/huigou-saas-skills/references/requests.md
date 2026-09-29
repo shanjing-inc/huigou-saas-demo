@@ -52,7 +52,7 @@ async function post(endpoint, query, vars, headers) {
     return result.data;
 }
 
-const login = await post("application", `mutation Login($openid: String!, $organizationId: Int!, $teamId: Int!) {
+const login = await post("partner", `mutation Login($openid: String!, $organizationId: Int!, $teamId: Int!) {
     login(openid: $openid, organizationId: $organizationId, teamId: $teamId) { token memberId }
 }`, variables, {
     "x-app-key": process.env.DEMO_APP_KEY,
