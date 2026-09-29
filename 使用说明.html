@@ -56,10 +56,10 @@
     <main id="content"><h1>惠购 Saas 版 · 使用说明</h1>
 <p>为你的应用接入商品推广、订单返利和提现功能。想先体验小程序？按 <a href="https://github.com/shanjing-inc/huigou-saas-demo/blob/master/README.md">Demo README</a> 启动。</p>
 <h2 id="section-1">能做什么</h2>
-<p><strong>用户登录 → 分享商品 → 生成推广链接 → 用户下单 → 订单结算 → 申请提现</strong></p>
-<p>支持哪些商城和商品，以对接人为你开通的范围为准。</p>
-<p>生成链接后，用户还需下单才可能产生返利。系统记录提现处理结果，实际打款由约定的处理方完成。</p>
-<p>预估返利还未到账，只有<strong>可用余额</strong>能申请提现。<code>pendingMoney</code>（待结算）包含未结算返利和在途提现本金；收益统计也不是钱包余额。</p>
+<p><strong>用户登录 → 查询商品 → 生成推广链接 → 用户下单 → 订单结算 → 申请提现</strong></p>
+<p>支持商城：京东、淘宝、1688、唯品会、抖音。</p>
+<p>打款：实际打款需接入方人工转账。</p>
+<p>预估返利还未到账，只有<strong>可用余额</strong>能申请提现。</p>
 <h2 id="section-2">怎么接入</h2>
 <ol>
 <li><strong>准备接入配置。</strong> Demo 使用正式服务域名和应用凭证。向对接人取得 App Key/Secret、组织 ID 和 Team ID；已有配置可直接使用。组织表示授权范围，Team 表示成员归属。</li>
