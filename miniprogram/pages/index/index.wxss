@@ -66,7 +66,9 @@ button::after { border: 0; }
 .order-platform { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 34rpx; height: 34rpx; border-radius: 5rpx; color: #fff; background: #ff5639; font-size: 21rpx; }
 .order-number { min-width: 0; color: #777; font-size: 21rpx; overflow-wrap: anywhere; }
 .order-platform-name { flex-shrink: 0; color: #808080; font-size: 19rpx; }
-.copy-order { display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; margin: 0; min-width: 144rpx; height: 44rpx; line-height: 1; padding: 0 9rpx; font-size: 19rpx; color: #ee694f; border: 1rpx solid #ff9a84; background: #fff; border-radius: 6rpx; }
+.copy-order { display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; width: 168rpx; height: 44rpx; padding: 0 9rpx; color: #ee694f; border: 1rpx solid #ff9a84; background: #fff; border-radius: 6rpx; }
+.copy-order-text { display: block; font-size: 24rpx; line-height: 1; }
+.copy-order.disabled { opacity: .45; }
 .order-reason { padding: 7rpx 20rpx; color: #999; background: #f1f1f1; font-size: 19rpx; }
 .order-goods { padding: 0 20rpx; }
 .order-good { display: flex; align-items: center; gap: 16rpx; padding: 15rpx 0; border-bottom: 1rpx solid #f1f1f1; }

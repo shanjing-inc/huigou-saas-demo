@@ -26,6 +26,7 @@ const candidate = (itemId, itemUrl = `https://example.test/${itemId}`) => ({
 
 test("order and wallet views display only supported source metrics", () => {
     const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /分享订单|自购预估|带货预估|邀请预估|任务预估|待申请补贴/);
     assert.match(markup, /stat\.orderCount/);
     assert.match(markup, /stat\.estimateMemberOrderCommission/);
@@ -33,6 +34,8 @@ test("order and wallet views display only supported source metrics", () => {
     assert.match(markup, /good\.displayItemPrice/);
     assert.match(markup, /item\.displayRebate/);
     assert.doesNotMatch(markup, /toggleOrderDetail|order-details|order-detail-toggle|item\.expanded/);
+    assert.match(markup, /<view class="copy-order [^\"]+" role="button"[^>]+aria-disabled="{{!item\.orderSn}}"[^>]+bindtap="copyOrderSn"><text class="copy-order-text">复制单号<\/text><\/view>/);
+    assert.match(styles, /\.copy-order \{[^}]+align-items: center;[^}]+justify-content: center;/);
 });
 
 test("opening the page automatically logs in when the backend starts, without a manual connection", async () => {
