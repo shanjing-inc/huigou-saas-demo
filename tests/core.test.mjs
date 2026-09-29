@@ -134,6 +134,12 @@ test("fixed identity, member JWT confinement, candidate, link and empty lists", 
     for (const action of ["orders", "bills", "withdrawals"]) {
         assert.deepEqual(await demo.request(action, { page: 1 }, session), { items: [], hasMore: false });
     }
+    const billQuery = JSON.parse(calls.find((call) => JSON.parse(call.options.body).query.includes("query Bills")).options.body).query;
+    const withdrawalQuery = JSON.parse(calls.find((call) => JSON.parse(call.options.body).query.includes("query Withdrawals")).options.body).query;
+    for (const query of [billQuery, withdrawalQuery]) {
+        assert.match(query, /orderBy: \{ createdAt: \{ direction: DESC, priority: 0 \}, id: \{ direction: DESC, priority: 1 \} \}/);
+    }
+    assert.match(withdrawalQuery, /memo createdAt updatedAt withdrawalAccountId withdrawalAccountType/);
     const orderQuery = JSON.parse(calls.find((call) => JSON.parse(call.options.body).query.includes("query Orders")).options.body).query;
     assert.match(orderQuery, /detail\s*\{\s*payPrice invalidReason goods\s*\{\s*itemId itemTitle imageUrl itemPrice itemNum\s*\}/);
     assert.match(orderQuery, /expectedSettleAt settledAt/);
