@@ -40,7 +40,7 @@ await show("withdrawals", [
 ], "money-withdrawals");
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     connected: true, mode: "profile", busy: false, error: "", notice: "",
-    profile: { memberId: 108, teamId: 23, role: "成员", money: "86.50", pendingMoney: "12.30", withdrawalMoney: "30.00" },
+    profile: { memberId: 108, teamId: 23, role: "成员", money: "86.50", pendingMoney: "12.30", withdrawalMoney: "30.00", displayMoney: "86.5", displayPendingMoney: "12.3", displayWithdrawalMoney: "30" },
 }));
 await ide("simulator_screenshot", "--path", `${project}/verify/money-profile.jpg`, "--wait-for-selector", ".member-balance");
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({ mode: "promote", content: "", candidates: [] }));

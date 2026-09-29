@@ -16,23 +16,23 @@
             <view class="member-identity"><view class="member-avatar">惠</view><view class="member-name"><text>成员 #{{profile.memberId}}</text><text class="member-meta">{{profile.role || '当前成员'}} · 惠购 DEMO</text></view></view>
             <view class="member-balance" role="button" aria-label="查看我的钱包" data-mode="wallet" bindtap="changeTab">
                 <view class="member-balance-head"><text>我的钱包</text><text>查看钱包 ›</text></view>
-                <view class="member-balance-values"><view><text class="balance-value">{{profile.money != null ? profile.money : '—'}}</text><text class="balance-label">可用余额 (元)</text></view><view><text class="balance-value">{{profile.pendingMoney != null ? profile.pendingMoney : '—'}}</text><text class="balance-label">待结算及提现中 (元)</text></view></view>
+                <view class="member-balance-values"><view><text class="balance-value">{{profile.money != null ? profile.displayMoney : '—'}}</text><text class="balance-label">可用余额 (元)</text></view><view><text class="balance-value">{{profile.pendingMoney != null ? profile.displayPendingMoney : '—'}}</text><text class="balance-label">待结算及提现中 (元)</text></view></view>
             </view>
             <view class="member-links">
                 <view class="member-link" role="button" data-mode="wallet" bindtap="changeTab"><text class="member-link-icon">¥</text><text>钱包与收益</text><text class="link-arrow">›</text></view>
                 <view class="member-link" role="button" data-mode="bills" bindtap="changeTab"><text class="member-link-icon">≡</text><text>金额明细</text><text class="link-arrow">›</text></view>
                 <view class="member-link" role="button" data-mode="withdrawals" bindtap="changeTab"><text class="member-link-icon">↗</text><text>提现记录</text><text class="link-arrow">›</text></view>
             </view>
-            <view class="member-details"><view class="member-details-title">成员资料</view><view class="stat"><text>成员 ID</text><text>{{profile.memberId}}</text></view><view class="stat"><text>Team ID</text><text>{{profile.teamId}}</text></view><view class="stat"><text>角色</text><text>{{profile.role}}</text></view><view class="stat"><text>累计提现</text><text>¥ {{profile.withdrawalMoney}}</text></view></view>
+            <view class="member-details"><view class="member-details-title">成员资料</view><view class="stat"><text>成员 ID</text><text>{{profile.memberId}}</text></view><view class="stat"><text>Team ID</text><text>{{profile.teamId}}</text></view><view class="stat"><text>角色</text><text>{{profile.role}}</text></view><view class="stat"><text>累计提现</text><text>¥ {{profile.displayWithdrawalMoney}}</text></view></view>
         </view>
 
         <view wx:elif="{{mode === 'wallet'}}" class="wallet-section">
             <view class="wallet-balance">
                 <view class="wallet-balance-label">可用余额 (元)</view>
-                <view class="wallet-balance-main"><text class="wallet-amount">{{walletLoaded ? profile.money : '—'}}</text><button class="wallet-withdraw" disabled="{{busy || !walletLoaded || !backendSupportsAccounts}}" bindtap="openWithdrawal">去提现 ›</button></view>
+                <view class="wallet-balance-main"><text class="wallet-amount">{{walletLoaded ? profile.displayMoney : '—'}}</text><button class="wallet-withdraw" disabled="{{busy || !walletLoaded || !backendSupportsAccounts}}" bindtap="openWithdrawal">去提现 ›</button></view>
                 <view class="wallet-summary">
-                    <view><text>已提现金额</text><text class="wallet-summary-value">{{walletLoaded ? profile.withdrawalMoney : '—'}}</text></view>
-                    <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.pendingMoney : '—'}}</text></view>
+                    <view><text>已提现金额</text><text class="wallet-summary-value">{{walletLoaded ? profile.displayWithdrawalMoney : '—'}}</text></view>
+                    <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.displayPendingMoney : '—'}}</text></view>
                 </view>
             </view>
             <view wx:if="{{backendReachable && !backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重试加载。</view>
@@ -48,8 +48,8 @@
             <view wx:for="{{walletStats}}" wx:for-item="stat" wx:key="date" class="wallet-stat-row">
                 <view class="wallet-stat-top"><text>{{stat.date}} 收益</text><text>{{stat.orderCount}} 笔订单</text></view>
                 <view class="wallet-stat-values">
-                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增预估返利</text><text class="wallet-stat-value">¥{{stat.estimateMemberOrderCommission}}</text></view>
-                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增已结算返利</text><text class="wallet-stat-value">¥{{stat.settledMemberOrderCommission}}</text></view>
+                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增预估返利</text><text class="wallet-stat-value">¥{{stat.displayEstimateMemberOrderCommission}}</text></view>
+                    <view class="wallet-stat-metric"><text class="wallet-stat-label">新增已结算返利</text><text class="wallet-stat-value">¥{{stat.displaySettledMemberOrderCommission}}</text></view>
                 </view>
             </view>
             <button wx:if="{{walletHasMore}}" class="quiet wallet-more" disabled="{{busy}}" loading="{{busy}}" bindtap="loadMore">加载更早时段</button>
@@ -100,7 +100,7 @@
                 </view>
             </view>
             <view class="withdraw-group">
-                <view class="withdraw-balance"><text>可用余额</text><text>¥ {{profile.money}}</text></view>
+                <view class="withdraw-balance"><text>可用余额</text><text>¥ {{profile.displayMoney}}</text></view>
                 <view class="input-label">提现金额（元）</view>
                 <input class="money-input" type="digit" maxlength="13" value="{{withdrawalAmount}}" placeholder="最低 1.00 元，最多两位小数" bindinput="updateWithdrawalAmount" />
             </view>
