@@ -29,13 +29,22 @@ test("order and wallet views display only supported source metrics", () => {
     const styles = readFileSync(new URL("../miniprogram/pages/index/index.wxss", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /分享订单|自购预估|带货预估|邀请预估|任务预估|待申请补贴/);
     assert.match(markup, /stat\.orderCount/);
-    assert.match(markup, /stat\.estimateMemberOrderCommission/);
-    assert.match(markup, /stat\.settledMemberOrderCommission/);
+    assert.match(markup, /stat\.displayEstimateMemberOrderCommission/);
+    assert.match(markup, /stat\.displaySettledMemberOrderCommission/);
     assert.match(markup, /good\.displayItemPrice/);
     assert.match(markup, /item\.displayRebate/);
     assert.doesNotMatch(markup, /toggleOrderDetail|order-details|order-detail-toggle|item\.expanded/);
     assert.match(markup, /<view class="copy-order [^\"]+" role="button"[^>]+aria-disabled="{{!item\.orderSn}}"[^>]+bindtap="copyOrderSn"><text class="copy-order-text">复制单号<\/text><\/view>/);
     assert.match(styles, /\.copy-order \{[^}]+align-items: center;[^}]+justify-content: center;/);
+});
+
+test("all monetary page labels use display fields without changing raw values", () => {
+    const markup = readFileSync(new URL("../miniprogram/pages/index/index.wxml", import.meta.url), "utf8");
+    for (const field of ["displayMoney", "displayPendingMoney", "displayWithdrawalMoney", "displayEstimateMemberOrderCommission", "displaySettledMemberOrderCommission"]) {
+        assert.match(markup, new RegExp(`\\b(?:profile|stat)\\.${field}\\b`));
+    }
+    assert.doesNotMatch(markup, /\{\{stat\.(?:estimateMemberOrderCommission|settledMemberOrderCommission)\}\}/);
+    assert.doesNotMatch(markup, /\{\{profile\.(?:money|pendingMoney|withdrawalMoney)\}\}/);
 });
 
 test("shopping instructions render as evenly spaced rounded steps", () => {
@@ -83,7 +92,7 @@ test("opening the page automatically logs in when the backend starts, without a 
     requests[1].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
     requests[1].complete();
     assert.equal(requests[2].url, "http://127.0.0.1:8787/api/login");
-    requests[2].success({ statusCode: 200, data: { session: "new-session", profile: { memberId: 7 } } });
+    requests[2].success({ statusCode: 200, data: { session: "new-session", profile: { memberId: 7, money: "0.0000", pendingMoney: "8.9400", withdrawalMoney: "1.10" } } });
     await flush();
     assert.equal(page.data.backendReachable, true);
     assert.equal(page.data.configured, true);
@@ -93,6 +102,8 @@ test("opening the page automatically logs in when the backend starts, without a 
     assert.equal(page.data.error, "");
     assert.equal(page.data.connected, true);
     assert.equal(page.data.profile.memberId, 7);
+    assert.equal(page.data.profile.money, "0.0000");
+    assert.deepEqual([page.data.profile.displayMoney, page.data.profile.displayPendingMoney, page.data.profile.displayWithdrawalMoney], ["0", "8.94", "1.1"]);
     assert.equal(page.app.globalData.session, "new-session");
     page.onShow();
     requests[3].success({ statusCode: 200, data: { demo: true, configured: true, supportsAccountManagement: true } });
@@ -489,7 +500,7 @@ test("candidate cards load at most two details at once and keep failed items sel
     } } });
     await flush();
     assert.equal(page.data.selected.preview.title, "真实商品");
-    assert.equal(page.data.selected.preview.price, "1654.00");
+    assert.equal(page.data.selected.preview.price, "1654");
     assert.equal(page.data.selected.preview.coupon, "100");
     assert.equal(page.data.selected.preview.rebate, "");
     assert.equal(pending.length, 3);
@@ -506,7 +517,14 @@ test("candidate cards load at most two details at once and keep failed items sel
     pending[3].success({ statusCode: 200, data: { data: { title: "可查", rebateInfo: { rebate: "8.50", status: 1 } } } });
     await flush();
     assert.equal(page.data.candidates[2].previewState, "unavailable");
-    assert.equal(page.data.candidates[3].preview.rebate, "8.50");
+    assert.equal(page.data.candidates[3].preview.rebate, "8.5");
+});
+
+test("product previews keep meaningful decimals while trimming trailing zeros", () => {
+    const page = mountPage(() => {});
+    const preview = page.itemPreview({ price: "0.0010", couponInfo: { amount: "100.00" }, rebateInfo: { status: 1, rebate: "0.0300" } });
+    assert.deepEqual({ price: preview.price, coupon: preview.coupon, rebate: preview.rebate }, { price: "0.001", coupon: "100", rebate: "0.03" });
+    assert.equal(page.itemPreview({ price: "0.0000", rebateInfo: { status: 1, rebate: "0.0000" } }).rebate, "0");
 });
 
 test("stale detail and image responses cannot overwrite a new parse or a disconnected session", async () => {
@@ -594,16 +612,22 @@ test("wallet switches periods, paginates only real buckets, and history opens fr
     page.changeTab({ currentTarget: { dataset: { mode: "wallet" } } });
     assert.equal(requests[0].url, "http://127.0.0.1:8787/api/wallet");
     assert.equal(requests[0].data.period, "day");
-    requests[0].success({ statusCode: 200, data: { data: { profile: { memberId: 99, money: "5.00", pendingMoney: "2.00", withdrawalMoney: "3.00" }, items: [{ date: "2026-09-28", orderCount: 1, estimateMemberOrderCommission: "2.5000", settledMemberOrderCommission: "0.0000" }], hasMore: true } } });
+    requests[0].success({ statusCode: 200, data: { data: { profile: { memberId: 99, money: "5.00", pendingMoney: "2.00", withdrawalMoney: "3.00" }, items: [{ date: "2026-09-28", orderCount: 1, estimateMemberOrderCommission: "0.0300", settledMemberOrderCommission: "0.0000" }], hasMore: true } } });
     await flush();
     assert.equal(page.data.profile.money, "5.00");
+    assert.deepEqual([page.data.profile.displayMoney, page.data.profile.displayPendingMoney, page.data.profile.displayWithdrawalMoney], ["5", "2", "3"]);
     assert.equal(page.data.walletStats.length, 1);
-    assert.equal(page.data.walletStats[0].estimateMemberOrderCommission, "2.5000");
+    assert.equal(page.data.walletStats[0].estimateMemberOrderCommission, "0.0300");
+    assert.equal(page.data.walletStats[0].displayEstimateMemberOrderCommission, "0.03");
+    assert.equal(page.data.walletStats[0].displaySettledMemberOrderCommission, "0");
     page.loadMore();
     assert.equal(requests[1].data.page, 2);
     requests[1].success({ statusCode: 200, data: { data: { profile: page.data.profile, items: [{ date: "2026-09-27", orderCount: 2, estimateMemberOrderCommission: "1.0000", settledMemberOrderCommission: "1.0000" }], hasMore: false } } });
     await flush();
     assert.equal(page.data.walletStats.length, 2);
+    assert.equal(page.data.walletStats[1].estimateMemberOrderCommission, "1.0000");
+    assert.equal(page.data.walletStats[1].displayEstimateMemberOrderCommission, "1");
+    assert.equal(page.data.walletStats[1].displaySettledMemberOrderCommission, "1");
     page.changeWalletPeriod({ currentTarget: { dataset: { period: "month" } } });
     assert.equal(requests[2].data.period, "month");
     assert.equal(page.data.walletStats.length, 0);
@@ -642,6 +666,8 @@ test("wallet withdrawal opens account management only through withdrawal and pre
     await flush();
     requests[1].success({ statusCode: 200, data: { data: { money: "10.00" } } });
     await flush();
+    assert.equal(page.data.profile.money, "10.00");
+    assert.equal(page.data.profile.displayMoney, "10");
     page.updateWithdrawalAmount({ detail: { value: "3.50" } });
     page.openAccounts();
     assert.equal(requests[2].url, "http://127.0.0.1:8787/api/accounts");
@@ -655,6 +681,7 @@ test("wallet withdrawal opens account management only through withdrawal and pre
     await flush();
     requests[4].success({ statusCode: 200, data: { data: { money: "10.00" } } });
     await flush();
+    assert.equal(page.data.profile.displayMoney, "10");
     assert.equal(page.data.withdrawalAccountId, 8);
     assert.equal(requests.every((request) => !["/api/withdraw", "/api/createAccount", "/api/updateAccount"].some((path) => request.url.endsWith(path))), true);
     page.backToProfile();

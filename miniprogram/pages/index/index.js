@@ -27,6 +27,23 @@ function displayAmount(value) {
     return /^-?\d+\.\d+$/.test(text) ? text.replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : text;
 }
 
+function displayProfile(profile) {
+    return {
+        ...profile,
+        displayMoney: displayAmount(profile.money),
+        displayPendingMoney: displayAmount(profile.pendingMoney),
+        displayWithdrawalMoney: displayAmount(profile.withdrawalMoney),
+    };
+}
+
+function displayWalletStat(stat) {
+    return {
+        ...stat,
+        displayEstimateMemberOrderCommission: displayAmount(stat.estimateMemberOrderCommission),
+        displaySettledMemberOrderCommission: displayAmount(stat.settledMemberOrderCommission),
+    };
+}
+
 function billRecord(item) {
     const amount = displayAmount(item.amount);
     const decrease = String(item.amount).trim().startsWith("-") || item.action === 2;
@@ -197,7 +214,7 @@ Page({
             this.invalidateCandidates();
             getApp().globalData.session = result.session;
             this.setData({
-                connected: true, configured: true, profile: result.profile,
+                connected: true, configured: true, profile: displayProfile(result.profile),
                 candidates: [], selected: null, selectedIndex: -1, item: null, link: null,
                 records: [], loaded: false, walletStats: [], walletLoaded: false, walletHasMore: false,
                 accounts: [], accountsLoaded: false, accountFormMode: "", accountForm: emptyAccountForm(), clearIdentity: false, withdrawalAmount: "", withdrawalAccountId: null,
@@ -248,7 +265,7 @@ Page({
             const selected = accounts.some((item) => item.id === this.data.withdrawalAccountId)
                 ? this.data.withdrawalAccountId : (accounts.find((item) => item.isDefault) || accounts[0])?.id ?? null;
             this.setData({ accounts: accounts.map((item) => ({ ...item, typeLabel: accountLabels[item.type] })), accountsLoaded: true,
-                withdrawalAccountId: selected, ...(profile ? { profile } : {}) });
+                withdrawalAccountId: selected, ...(profile ? { profile: displayProfile(profile) } : {}) });
         });
     },
 
@@ -366,7 +383,7 @@ Page({
                 let profile;
                 try {
                     profile = (await this.api("profile")).data;
-                    if (this.data.mode === "withdraw" && this.data.connected) this.setData({ profile });
+                    if (this.data.mode === "withdraw" && this.data.connected) this.setData({ profile: displayProfile(profile) });
                     await this.loadAccountsAfterWithdrawal();
                 } catch {
                     this.setData({ error: "申请已提交，但刷新余额或默认账号失败。请查看提现记录后再操作，勿重复提交。" });
@@ -403,9 +420,10 @@ Page({
             const period = this.data.walletPeriod;
             const result = (await this.api("wallet", { period, page })).data;
             if (this.data.mode !== "wallet" || period !== this.data.walletPeriod || !this.data.connected) return;
+            const items = result.items.map(displayWalletStat);
             this.setData({
-                profile: result.profile,
-                walletStats: page === 1 ? result.items : this.data.walletStats.concat(result.items),
+                profile: displayProfile(result.profile),
+                walletStats: page === 1 ? items : this.data.walletStats.concat(items),
                 walletPage: page, walletHasMore: result.hasMore, walletLoaded: true,
             });
         });
@@ -436,9 +454,9 @@ Page({
             title: item?.title || "",
             imageUrl: item?.imageUrl || "",
             shopName: item?.shopName || "",
-            price: price && Number.isFinite(Number(price)) ? price : "",
-            coupon: coupon != null && Number(coupon) > 0 ? String(coupon) : "",
-            rebate: item?.rebateInfo?.status != null && item.rebateInfo.status !== -1 && rebate != null && String(rebate).trim() !== "" && Number.isFinite(Number(rebate)) ? String(rebate) : "",
+            price: price && Number.isFinite(Number(price)) ? displayAmount(price) : "",
+            coupon: coupon != null && Number(coupon) > 0 ? displayAmount(coupon) : "",
+            rebate: item?.rebateInfo?.status != null && item.rebateInfo.status !== -1 && rebate != null && String(rebate).trim() !== "" && Number.isFinite(Number(rebate)) ? displayAmount(rebate) : "",
         };
     },
 

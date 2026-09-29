@@ -21,17 +21,18 @@ await ide("automation_page_action", "--action", "getData", "--data-path", "mode"
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     connected: true, mode: "wallet", loaded: true, walletLoaded: true,
     notice: "离线布局样例 · 非接口金额", error: "",
-    profile: { memberId: 99, money: "12.34", pendingMoney: "5.67", withdrawalMoney: "8.90" },
+    profile: { memberId: 99, money: "12.34", pendingMoney: "5.67", withdrawalMoney: "8.90", displayMoney: "12.34", displayPendingMoney: "5.67", displayWithdrawalMoney: "8.9" },
 }), "--wait-for-selector", ".shell", "--wait", "1");
 await ide("automation_page_action", "--action", "setData", "--patch", JSON.stringify({
     walletStats: [
-        { date: "2026-09-28", orderCount: 2, estimateMemberOrderCommission: "1.2400", settledMemberOrderCommission: "0.0000" },
-        { date: "2026-09-27", orderCount: 1, estimateMemberOrderCommission: "0.0000", settledMemberOrderCommission: "0.8800" },
+        { date: "2026-09-28", orderCount: 2, estimateMemberOrderCommission: "1.2400", displayEstimateMemberOrderCommission: "1.24", settledMemberOrderCommission: "0.0000", displaySettledMemberOrderCommission: "0" },
+        { date: "2026-09-27", orderCount: 1, estimateMemberOrderCommission: "0.0000", displayEstimateMemberOrderCommission: "0", settledMemberOrderCommission: "0.8800", displaySettledMemberOrderCommission: "0.88" },
     ],
 }));
 const page = await ide("automation_page_action", "--action", "getData");
 assert.equal(page.data.mode, "wallet");
 assert.equal(page.data.notice, "离线布局样例 · 非接口金额");
 assert.equal(page.data.walletStats.length, 2);
+assert.equal(page.data.walletStats[0].displaySettledMemberOrderCommission, "0");
 await ide("simulator_screenshot", "--path", `${project}/verify/wallet.jpg`, "--wait-for-selector", ".wallet-stat-row");
 console.log("Offline wallet layout: labeled balances and two statistic buckets rendered.");
