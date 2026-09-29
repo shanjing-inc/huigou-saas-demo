@@ -24,8 +24,8 @@
 
 拿到接口域名后，拼接以下路径：
 
-- `/api/graphql/partner`：应用接口，用 App Key、时间戳和签名鉴权；旧 `/api/graphql/application` 已停用，不提供兼容转发。
-- `/api/graphql/member`：成员接口，用 `Authorization: Bearer <Token>` 鉴权。
+- https://saas.tbxzs.cn/api/graphql/partner：应用接口，用 App Key、时间戳和签名鉴权。
+- https://saas.tbxzs.cn/api/graphql/member：成员接口，用 `Authorization: Bearer <Token>` 鉴权。
 
 浏览器访问上述地址，可直接进入网页版 Yoga GraphiQL 浏览接口。也可以使用 Chrome 插件 [Altair GraphQL Client](https://chromewebstore.google.com/detail/altair-graphql-client/flnheeellpciglgpaodhkhmapeljopja) 导入查看。
 
