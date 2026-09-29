@@ -452,7 +452,7 @@ Page({
                 imageFailed: false,
                 version,
             }));
-            this.setData({ candidates: cards, selected: null, selectedIndex: -1, item: null, link: null, notice: cards.length ? "点击候选内容即可转链。" : "上游没有返回可用候选，请换一条有效分享内容。" });
+            this.setData({ candidates: cards, selected: null, selectedIndex: -1, item: null, link: null, notice: cards.length ? "点击解析结果即可转链。" : "未解析出可用结果，请换一条有效的分享内容。" });
             void this.enrichCandidates(version, cards);
         });
     },
@@ -506,7 +506,7 @@ Page({
     createLink() {
         this.run(async () => {
             const selected = this.selection();
-            if (!selected) throw new Error("请先解析并选择一条有效候选物料。");
+            if (!selected) throw new Error("请先解析并选择一条有效的解析结果。");
             const version = this.candidateVersion;
             const index = this.data.selectedIndex;
             const session = getApp().globalData.session;

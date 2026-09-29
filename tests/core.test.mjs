@@ -147,7 +147,7 @@ test("rejects scope override and refreshes session on revoked token", async () =
     const { session } = await demo.login();
     const count = calls.length;
     for (const [action, input] of [["profile", { openid: "other" }], ["orders", { organizationId: 2 }], ["parse", { content: "" }], ["link", { material: "test", platform: "nope" }]]) {
-        await assert.rejects(demo.request(action, input, session), (error) => error instanceof DemoError && error.code === "INPUT");
+        await assert.rejects(demo.request(action, input, session), (error) => error instanceof DemoError && error.code === "INPUT" && !error.message.includes("候选"));
     }
     assert.equal(calls.length, count);
     expired = true;

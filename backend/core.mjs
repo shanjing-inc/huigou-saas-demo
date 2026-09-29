@@ -140,7 +140,7 @@ function variablesFor(action, input) {
     if (action === "item" || action === "link") {
         fields(input, ["material", "platform", "materialType"]);
         if (typeof input.material !== "string" || !input.material.trim() || input.material.length > 2048 || !validPlatforms.has(input.platform) || (input.materialType !== undefined && !types.has(input.materialType))) {
-            throw new DemoError("INPUT", "请选择有效候选物料，或检查物料类型和长度。");
+            throw new DemoError("INPUT", "请选择有效的解析结果，或检查物料类型和长度。");
         }
         return { material: input.material.trim(), platform: input.platform, ...(input.materialType ? { materialType: input.materialType } : {}) };
     }
