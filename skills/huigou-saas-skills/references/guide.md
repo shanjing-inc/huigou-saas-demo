@@ -24,7 +24,7 @@
 
 在**对接人提供的目标站点**后加以下路径：
 
-- `/api/graphql/application`：应用接口，用 App Key、时间戳和签名鉴权。
+- `/api/graphql/partner`：应用接口，用 App Key、时间戳和签名鉴权；旧 `/api/graphql/application` 已停用，不提供兼容转发。
 - `/api/graphql/member`：成员接口，用 `Authorization: Bearer <Token>` 鉴权。
 
 浏览器对上述地址发送 HTML `GET`，可直接进入 **Yoga GraphiQL**，在 Docs 中查看字段。支持 GraphQL 自省的文档插件/客户端可把同一地址设为 Schema 地址，发送 `POST` 请求，以 `Content-Type: application/json` 提交标准自省查询（`__schema` / `__type`），通过 JSON 响应导入字段与类型；不要将 GraphiQL 的 HTML 页面当作 JSON Schema 导入。纯 Schema 自省可匿名读取元数据；页面公开不代表业务查询或 Mutation 免鉴权，业务调用仍需相应身份与授权。

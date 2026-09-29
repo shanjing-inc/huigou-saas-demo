@@ -17,6 +17,7 @@ let badWallet = false;
 
 function upstream(url, options) {
     calls.push({ url, options });
+    assert.ok(["/api/graphql/partner", "/api/graphql/member"].includes(new URL(url).pathname), "unknown GraphQL endpoint");
     const query = JSON.parse(options.body).query;
     let payload;
     if (query.includes("mutation Login")) {
@@ -88,7 +89,7 @@ test("wallet statistics use the authenticated member ID with signed application 
     const statisticCall = calls.at(-1);
     assert.match(profileCall.url, /\/api\/graphql\/member$/);
     assert.equal(profileCall.options.headers.authorization, "Bearer member-jwt-private");
-    assert.match(statisticCall.url, /\/api\/graphql\/application$/);
+    assert.match(statisticCall.url, /\/api\/graphql\/partner$/);
     const { query, variables } = JSON.parse(statisticCall.options.body);
     assert.match(query, /listRevenueStatistic\(memberId: \$memberId/);
     assert.equal(variables.memberId, 99);
@@ -117,7 +118,7 @@ test("fixed identity, member JWT confinement, candidate, link and empty lists", 
     assert.equal(profile.teamId, 34);
     assert.equal(JSON.stringify(profile).includes("member-jwt-private"), false);
     const login = calls[0];
-    assert.ok(login.url.endsWith("/api/graphql/application"));
+    assert.ok(login.url.endsWith("/api/graphql/partner"));
     assert.deepEqual(JSON.parse(login.options.body).variables, { openid: env.DEMO_OPENID, organizationId: 12, teamId: 34 });
     assert.equal(login.options.headers["x-app-key"], config.appKey);
     assert.match(login.options.headers["x-timestamp"], /^\d{10}$/);

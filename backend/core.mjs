@@ -175,7 +175,7 @@ export function createDemo(config, fetchImpl = fetch) {
     async function call(action, variables, token) {
         const operation = operations[action];
         const headers = { "content-type": "application/json" };
-        if (operation.endpoint === "application") {
+        if (operation.endpoint === "partner") {
             headers["x-app-key"] = config.appKey;
             headers["x-timestamp"] = String(Math.floor(Date.now() / 1000));
             headers["x-signature"] = sign(variables, config.secret);
