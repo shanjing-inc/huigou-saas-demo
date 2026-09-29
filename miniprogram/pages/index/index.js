@@ -520,6 +520,7 @@ Page({
     },
 
     guideLink(link, platform, isCurrent) {
+        const shortLink = typeof link?.miniProgram?.shortLink === "string" ? link.miniProgram.shortLink.trim() : "";
         const fallback = () => {
             if (!isCurrent()) return;
             const code = typeof link?.code === "string" ? link.code.trim() : "";
@@ -528,32 +529,38 @@ Page({
             else if (url) this.copyPromotion(url, "网址", platform, isCurrent);
             else this.setData({ error: "转链成功，但没有可用的小程序、口令或网址。" });
         };
-        if (!link?.miniProgram?.appId || typeof wx.navigateToMiniProgram !== "function") return fallback();
-        let settled = false;
-        try {
-            wx.navigateToMiniProgram({
-                appId: link.miniProgram.appId,
-                path: link.miniProgram.path || "",
-                success: () => { settled = true; },
-                fail: () => {
+        const copyMiniLink = () => shortLink ? this.copyMiniProgramLink(link, isCurrent) : fallback();
+        const navigate = (options, onFailure) => {
+            if (!isCurrent()) return;
+            if (typeof wx.navigateToMiniProgram !== "function") return onFailure();
+            let settled = false;
+            try {
+                wx.navigateToMiniProgram({ ...options, success: () => { settled = true; }, fail: () => {
                     if (settled) return;
                     settled = true;
-                    fallback();
-                },
-            });
-        } catch {
-            if (!settled) fallback();
-        }
+                    onFailure();
+                } });
+            } catch {
+                if (!settled) {
+                    settled = true;
+                    onFailure();
+                }
+            }
+        };
+        const navigateShortLink = () => shortLink ? navigate({ shortLink }, copyMiniLink) : fallback();
+        if (link?.miniProgram?.appId && link?.miniProgram?.path) {
+            navigate({ appId: link.miniProgram.appId, path: link.miniProgram.path }, navigateShortLink);
+        } else navigateShortLink();
     },
 
-    copyPromotion(value, kind, platform, isCurrent = () => this.data.connected) {
+    copyPromotion(value, kind, platform, isCurrent = () => this.data.connected, prompt) {
         try {
             wx.setClipboardData({
                 data: value,
                 success: () => {
                     if (!isCurrent()) return;
                     this.setData({ error: "" });
-                    wx.showModal({ title: `${kind}复制成功`, content: `已复制${kind}，请打开${platformLabels[platform] || platform || "购物平台"}继续购买。`, showCancel: false });
+                    wx.showModal({ title: `${kind}复制成功`, content: prompt || `已复制${kind}，请打开${platformLabels[platform] || platform || "购物平台"}继续购买。`, showCancel: false });
                 },
                 fail: () => {
                     if (isCurrent()) this.setData({ error: `${kind}复制失败，请重试。` });
@@ -564,9 +571,22 @@ Page({
         }
     },
 
+    copyMiniProgramLink(link, isCurrent = () => this.data.connected && this.data.link === link) {
+        if (!isCurrent()) return;
+        const shortLink = typeof link?.miniProgram?.shortLink === "string" ? link.miniProgram.shortLink.trim() : "";
+        if (!shortLink) return;
+        const shareText = shortLink.startsWith("#小程序://");
+        this.copyPromotion(shortLink, shareText ? "小程序分享文本" : "小程序链接", null, isCurrent,
+            shareText ? "已复制分享文本，请打开微信并粘贴到聊天中打开。" : "已复制小程序链接，请在微信中打开。");
+    },
+
+    retryCopyMiniProgramLink() {
+        this.copyMiniProgramLink(this.data.link);
+    },
+
     openMiniProgram() {
         const link = this.data.link;
-        if (link?.miniProgram?.appId && !this.data.busy) {
+        if (((link?.miniProgram?.appId && link?.miniProgram?.path) || link?.miniProgram?.shortLink) && !this.data.busy) {
             this.guideLink(link, this.data.selected?.platform, () => this.data.connected && this.data.link === link);
         }
     },

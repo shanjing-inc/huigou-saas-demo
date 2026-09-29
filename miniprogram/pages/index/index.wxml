@@ -155,8 +155,10 @@
                     <view wx:if="{{link.url}}" class="url-text">{{link.url}}</view>
                     <view wx:if="{{link.shortUrl}}" class="meta">短链：{{link.shortUrl}}</view>
                     <view wx:if="{{link.code}}" class="meta">口令：{{link.code}}</view>
-                    <view wx:if="{{link.miniProgram}}" class="meta">小程序：{{link.miniProgram.appId}} / {{link.miniProgram.path}}</view>
-                    <button wx:if="{{link.miniProgram && link.miniProgram.appId}}" class="quiet" bindtap="openMiniProgram">打开小程序</button>
+                    <view wx:if="{{link.miniProgram && link.miniProgram.appId && link.miniProgram.path}}" class="meta">小程序：{{link.miniProgram.appId}} / {{link.miniProgram.path}}</view>
+                    <view wx:if="{{link.miniProgram && link.miniProgram.shortLink}}" class="meta url-text">小程序链接：{{link.miniProgram.shortLink}}</view>
+                    <button wx:if="{{link.miniProgram && ((link.miniProgram.appId && link.miniProgram.path) || link.miniProgram.shortLink)}}" class="quiet" bindtap="openMiniProgram">打开小程序</button>
+                    <button wx:if="{{link.miniProgram && link.miniProgram.shortLink}}" class="quiet" bindtap="retryCopyMiniProgramLink">复制小程序链接</button>
                     <button wx:if="{{link.code}}" class="quiet" bindtap="copyCode">复制口令</button>
                     <button wx:if="{{link.shortUrl || link.url}}" class="quiet" bindtap="copyLink">复制网址</button>
                 </view>
