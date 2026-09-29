@@ -24,7 +24,7 @@
                 <view class="tab {{mode === 'orders' ? 'active' : ''}}" data-mode="orders" bindtap="changeTab">订单</view>
                 <view class="tab {{mode === 'wallet' ? 'active' : ''}}" data-mode="wallet" bindtap="changeTab">钱包</view>
                 <view class="tab {{mode === 'bills' ? 'active' : ''}}" data-mode="bills" bindtap="changeTab">账单</view>
-                <view class="tab {{mode === 'withdrawals' ? 'active' : ''}}" data-mode="withdrawals" bindtap="changeTab">提现</view>
+                <view class="tab {{mode === 'withdrawals' ? 'active' : ''}}" data-mode="withdrawals" bindtap="changeTab">提现记录</view>
             </view>
         </scroll-view>
 
@@ -41,13 +41,12 @@
         <view wx:elif="{{mode === 'wallet'}}" class="wallet-section">
             <view class="wallet-balance">
                 <view class="wallet-balance-label">可用余额 (元)</view>
-                <view class="wallet-balance-main"><text class="wallet-amount">{{walletLoaded ? profile.money : '—'}}</text><button class="wallet-history" data-mode="withdrawals" bindtap="changeTab">提现记录 ›</button></view>
+                <view class="wallet-balance-main"><text class="wallet-amount">{{walletLoaded ? profile.money : '—'}}</text><button class="wallet-withdraw" disabled="{{busy || !walletLoaded || !backendSupportsAccounts}}" bindtap="openWithdrawal">去提现 ›</button></view>
                 <view class="wallet-summary">
                     <view><text>已提现金额</text><text class="wallet-summary-value">{{walletLoaded ? profile.withdrawalMoney : '—'}}</text></view>
                     <view><text>待结算及提现中</text><text class="wallet-summary-value">{{walletLoaded ? profile.pendingMoney : '—'}}</text></view>
                 </view>
             </view>
-            <view class="money-actions"><button class="money-action primary" disabled="{{busy || !walletLoaded || !backendSupportsAccounts}}" bindtap="openWithdrawal">申请提现</button><button class="money-action quiet" disabled="{{busy || !backendSupportsAccounts}}" bindtap="openAccounts">管理收款账号</button></view>
             <view wx:if="{{backendReachable && !backendSupportsAccounts}}" class="write-warning">运行中的 Demo 后端版本过旧。请在原终端停止后重新运行 pnpm backend，再重试加载。</view>
             <button wx:if="{{!backendSupportsAccounts}}" class="quiet wallet-more" disabled="{{checkingBackend}}" loading="{{checkingBackend}}" bindtap="checkBackend">重试加载</button>
             <view class="wallet-periods">
@@ -102,18 +101,22 @@
             </view>
         </view>
 
-        <view wx:elif="{{mode === 'withdraw'}}" class="money-section">
-            <view class="withdraw-balance"><text>可用余额</text><text>¥ {{profile.money}}</text></view>
-            <view class="input-label">提现金额（元）</view>
-            <input class="money-input" type="digit" maxlength="13" value="{{withdrawalAmount}}" placeholder="最低 1.00 元，最多两位小数" bindinput="updateWithdrawalAmount" />
-            <view class="withdraw-account-head"><text class="subhead">收款账号</text><text class="wallet-refresh" role="button" bindtap="openAccounts">管理账号 ›</text></view>
-            <view wx:if="{{busy && !accountsLoaded}}" class="empty">正在读取收款账号…</view>
-            <view wx:elif="{{accountsLoaded && !accounts.length}}" class="empty">请先登记收款账号</view>
-            <view wx:for="{{accounts}}" wx:for-item="account" wx:key="id" class="account-row selectable {{withdrawalAccountId === account.id ? 'chosen' : ''}}" role="button" data-id="{{account.id}}" bindtap="selectWithdrawalAccount">
-                <view class="account-main"><text>{{account.typeLabel}} <text wx:if="{{account.isDefault}}" class="default-tag">默认</text></text><text>{{account.account}}</text></view>
-                <view class="account-owner">{{account.name}} <text wx:if="{{withdrawalAccountId === account.id}}" class="selected-account">已选中 ✓</text></view>
+        <view wx:elif="{{mode === 'withdraw'}}" class="money-section withdraw-section">
+            <view class="withdraw-group">
+                <view class="withdraw-account-head"><text class="subhead">收款账号</text><text class="wallet-refresh" role="button" bindtap="openAccounts">管理收款账号 ›</text></view>
+                <view wx:if="{{busy && !accountsLoaded}}" class="empty">正在读取收款账号…</view>
+                <view wx:elif="{{accountsLoaded && !accounts.length}}" class="empty">请先登记收款账号</view>
+                <view wx:for="{{accounts}}" wx:for-item="account" wx:key="id" class="account-row selectable {{withdrawalAccountId === account.id ? 'chosen' : ''}}" role="button" data-id="{{account.id}}" bindtap="selectWithdrawalAccount">
+                    <view class="account-main"><text>{{account.typeLabel}} <text wx:if="{{account.isDefault}}" class="default-tag">默认</text></text><text>{{account.account}}</text></view>
+                    <view class="account-owner">{{account.name}} <text wx:if="{{withdrawalAccountId === account.id}}" class="selected-account">已选中 ✓</text></view>
+                </view>
             </view>
-            <button class="primary" disabled="{{busy || !accountsLoaded || !accounts.length || !withdrawalAmount}}" loading="{{busy}}" bindtap="submitWithdrawal">确认提现信息</button>
+            <view class="withdraw-group">
+                <view class="withdraw-balance"><text>可用余额</text><text>¥ {{profile.money}}</text></view>
+                <view class="input-label">提现金额（元）</view>
+                <input class="money-input" type="digit" maxlength="13" value="{{withdrawalAmount}}" placeholder="最低 1.00 元，最多两位小数" bindinput="updateWithdrawalAmount" />
+            </view>
+            <button class="primary withdraw-submit" disabled="{{busy || !accountsLoaded || !accounts.length || !withdrawalAmount}}" loading="{{busy}}" bindtap="submitWithdrawal">确认提现信息</button>
             <view class="wallet-hint">提交会占用当前成员的实际可用余额；如刷新失败，请先核对提现记录，勿重复提交。</view>
         </view>
 
