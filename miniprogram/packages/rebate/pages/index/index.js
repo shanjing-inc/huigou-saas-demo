@@ -1,5 +1,5 @@
-// For phone debugging, set this to http://<computer-private-IP>:<DEMO_PORT> and recompile.
-const BACKEND_BASE = "http://127.0.0.1:8787";
+// Generated from .env when the demo backend starts; recompile after restarting it.
+const { BACKEND_BASE } = require("../../config/backend");
 const sections = ["promote", "orders", "profile", "wallet", "bills", "withdrawals"];
 const walletPeriods = ["day", "month", "year"];
 const accountLabels = { 1: "支付宝", 2: "微信", 3: "银行卡" };
@@ -145,7 +145,7 @@ Page({
                     configured,
                     backendSupportsAccounts,
                     error: !backendReachable ? `当前请求 ${BACKEND_BASE}/api/status 未返回 Demo 后端状态，请检查地址和网络。`
-                        : !configured ? `当前请求 ${BACKEND_BASE}/api/status 的后端未配置；若后端启用了 DEMO_LAN_HOST，请将 BACKEND_BASE 改为同一地址并重新编译。`
+                        : !configured ? `当前请求 ${BACKEND_BASE}/api/status 的后端未配置；请核对 .env，重启后端后重新编译或更新手机预览。`
                             : !backendSupportsAccounts ? "运行的是旧版 Demo 后端，请重启后端并重试加载。" : "",
                 });
                 if (configured && backendSupportsAccounts && !this.data.connected) void this.connect();
