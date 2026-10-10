@@ -20,7 +20,9 @@
 pnpm backend
 ```
 
-保持终端打开。访问 `http://127.0.0.1:8787/api/status`，看到 `configured: true` 表示配置格式正确；小程序自动加载成员资料后才表示接口可用。`pnpm dev` 与此命令相同。
+保持终端打开。访问终端打印地址的 `/api/status`，看到 `configured: true` 表示配置格式正确；小程序自动加载成员资料后才表示接口可用。`pnpm dev` 与此命令相同。
+
+成功启动后，会根据 `.env` 的 `DEMO_LAN_HOST` 和 `DEMO_PORT` 自动生成小程序地址文件 `miniprogram/packages/rebate/config/backend.js`。该文件只有公开地址，不含密钥，并已加入 Git 忽略。首次编译前必须先启动后端；启动或生成失败会报错退出。
 
 ### 3. 打开小程序
 
@@ -28,7 +30,7 @@ pnpm backend
 2. 在本地设置中关闭合法域名校验（`setting.urlCheck: false`），允许模拟器访问本机后端；不要上传这份本地配置。
 3. 点击「进入 Demo」，打开子包 `packages/rebate/pages/index/index`。
 
-请求地址默认是 `http://127.0.0.1:8787`。需要修改时，编辑 `miniprogram/packages/rebate/pages/index/index.js` 顶部的 `BACKEND_BASE`，然后重新编译。
+请求地址默认是 `http://127.0.0.1:8787`。需要修改时，只编辑 `.env` 的 `DEMO_LAN_HOST`、`DEMO_PORT`，重启后端，再重新编译或更新手机预览；无需修改页面源码。已安装的手机预览不会随电脑上的配置自动更新。
 
 页面自动登录。粘贴[商品样例链接](skills/huigou-saas-skills/references/test-materials.md)，选择解析结果即可转链；订单和钱包页展示当前成员的实际数据。
 
@@ -42,11 +44,11 @@ pnpm backend
 DEMO_LAN_HOST=192.168.1.10
 ```
 
-将 `BACKEND_BASE` 改为 `http://192.168.1.10:8787`，重新编译小程序并重启后端。确认后端打印的地址与它一致；如使用自定义 `DEMO_PORT`，两处端口也要一致。旧配置 `DEMO_LAN_TOKEN` 如仍存在，需删除。
+重启后端，再重新编译小程序或更新手机预览。后端监听地址和生成的小程序请求地址都会变为 `http://192.168.1.10:8787`；自定义端口只需设置 `DEMO_PORT`。旧配置 `DEMO_LAN_TOKEN` 如仍存在，需删除。
 
 手机上的 `127.0.0.1` 指向手机自己。连接失败时，检查电脑 IP、防火墙和端口；若微信拦截 HTTP，需使用微信支持的调试模式。
 
-结束后删除 `DEMO_LAN_HOST`，恢复 `BACKEND_BASE` 为本机地址，重启后端并重新编译。
+结束后删除或清空 `DEMO_LAN_HOST`，重启后端并重新编译，小程序地址会恢复为 `127.0.0.1`（端口仍由 `DEMO_PORT` 控制）。
 
 ## 使用时注意
 
@@ -57,7 +59,7 @@ DEMO_LAN_HOST=192.168.1.10
 
 | 现象 | 怎么处理 |
 | --- | --- |
-| 提示后端未启动或未配置 | 对照后端打印的地址与页面的 `/api/status` 地址，主机和端口必须一致。设置 `DEMO_LAN_HOST` 后只监听该 IP；同步修改 `BACKEND_BASE` 并重新编译。 |
+| 提示后端未启动或未配置 | 对照后端打印的地址与页面的 `/api/status` 地址，主机和端口必须一致。修改 `.env` 后重启后端，确认启动成功，再重新编译或更新手机预览。 |
 | 更新后仍是旧行为 | 停止占用 8787 端口的旧后端，再启动。状态响应应有 `supportsAccountManagement: true`。 |
 | 登录或收益统计调用失败 | 确认目标 SaaS 已启用 `/api/graphql/partner`，更新并重启本机后端；旧 `/api/graphql/application` 不再提供服务。`DEMO_API_BASE_URL` 仍填写站点根地址。 |
 | 转链提示参数无效 | 检查平台、素材类型及商品链接／ID，重新解析后选择结果；这不是余额不足提示。 |
@@ -71,7 +73,7 @@ DEMO_LAN_HOST=192.168.1.10
 
 复用到已有小程序：
 
-1. 将整个 `miniprogram/packages/rebate/` 复制到目标小程序的同名目录。
+1. 先启动 Demo 后端生成地址文件，再将整个 `miniprogram/packages/rebate/`（包含 `config/backend.js`）复制到目标小程序的同名目录。修改 `.env` 并重启后端后，重新复制该生成文件并编译目标小程序。
 2. 在 `app.json` 的 `subPackages` 中添加 `{ "root": "packages/rebate", "pages": ["pages/index/index"] }`。
 3. 从主包调用 `wx.navigateTo({ url: "/packages/rebate/pages/index/index" })` 打开。
-4. 将 `BACKEND_BASE` 改为自己的后端地址，接入实际用户认证并配置 HTTPS 合法 request 域名。应用密钥和成员 Token 保留在后端。
+4. 正式接入时，以自己的部署配置提供 `config/backend.js` 中的 HTTPS 后端地址，接入实际用户认证并配置 HTTPS 合法 request 域名。应用密钥和成员 Token 保留在后端；Demo 的 `.env` 生成流程仅用于本机调试。

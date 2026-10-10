@@ -3,9 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 
-function mountPage(request, setClipboardData = () => {}, showModal = () => {}, navigateToMiniProgram, source = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.js", import.meta.url), "utf8")) {
+function mountPage(request, setClipboardData = () => {}, showModal = () => {}, navigateToMiniProgram, source = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.js", import.meta.url), "utf8"), backendBase = "http://127.0.0.1:8787") {
     let definition;
     runInNewContext(source, {
+        require: (path) => {
+            assert.equal(path, "../../config/backend");
+            return { BACKEND_BASE: backendBase };
+        },
         Page: (value) => { definition = value; },
         wx: { request, setClipboardData, showModal, ...(navigateToMiniProgram ? { navigateToMiniProgram } : {}) },
     });
@@ -20,6 +24,20 @@ function mountPage(request, setClipboardData = () => {}, showModal = () => {}, n
 const flush = () => new Promise(setImmediate);
 const candidate = (itemId, itemUrl = `https://example.test/${itemId}`) => ({
     platform: "jd", type: "goods", keyContent: "same share text", detail: { itemId, itemUrl, itemTitle: `商品 ${itemId}` },
+});
+
+test("miniapp uses the generated LAN address and port for both status and API requests", async () => {
+    const requests = [];
+    const page = mountPage((options) => requests.push(options), undefined, undefined, undefined, undefined, "http://192.168.31.31:9988");
+    page.checkBackend();
+    assert.equal(requests[0].url, "http://192.168.31.31:9988/api/status");
+    const result = page.api("profile");
+    assert.equal(requests[1].url, "http://192.168.31.31:9988/api/profile");
+    requests[1].success({ statusCode: 200, data: { data: { memberId: 1 } } });
+    await result;
+    requests[0].fail();
+    requests[0].complete();
+    assert.match(page.data.error, /192\.168\.31\.31:9988\/api\/status/);
 });
 
 test("promotion errors stay visible without clearing an authorized session", async () => {
@@ -48,7 +66,8 @@ test("rebate package is self-contained and launches from the main debug page", (
     const source = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.js", import.meta.url), "utf8");
     const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     const styles = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxss", import.meta.url), "utf8");
-    assert.doesNotMatch(source, /getApp\(|globalData|\.\.\//);
+    assert.doesNotMatch(source, /getApp\(|globalData/);
+    assert.deepEqual([...source.matchAll(/require\("([^"]+)"\)/g)].map((match) => match[1]), ["../../config/backend"]);
     assert.match(styles, /^page \{/);
     assert.match(markup, /src="\.\.\/\.\.\/images\/tab-shop/);
     for (const icon of ["shop", "orders", "profile"]) {
@@ -158,7 +177,7 @@ test("opening the page automatically logs in when the backend starts, without a 
     assert.equal(requests.length, 4);
 });
 
-test("unconfigured loopback backend points to the LAN host setting", () => {
+test("unconfigured backend points to env, restart and recompilation without a source edit", () => {
     const requests = [];
     const page = mountPage((options) => requests.push(options));
     page.data.connected = false;
@@ -168,7 +187,9 @@ test("unconfigured loopback backend points to the LAN host setting", () => {
     assert.equal(page.data.backendReachable, true);
     assert.equal(page.data.connected, false);
     assert.match(page.data.error, /127\.0\.0\.1:8787\/api\/status/);
-    assert.match(page.data.error, /DEMO_LAN_HOST/);
+    assert.match(page.data.error, /\.env/);
+    assert.match(page.data.error, /重启后端.*重新编译.*手机预览/);
+    assert.doesNotMatch(page.data.error, /BACKEND_BASE/);
     assert.equal(requests.length, 1);
 });
 
@@ -265,12 +286,10 @@ test("status check rejects a different local service", () => {
 test("build-time backend URL serves status and actions without phone settings or an access token", async () => {
     const requests = [];
     const source = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.js", import.meta.url), "utf8");
-    const configuredSource = source.replace('const BACKEND_BASE = "http://127.0.0.1:8787";', 'const BACKEND_BASE = "http://192.168.1.10:8787";');
-    assert.notEqual(configuredSource, source);
     const markup = readFileSync(new URL("../miniprogram/packages/rebate/pages/index/index.wxml", import.meta.url), "utf8");
     assert.doesNotMatch(markup, /服务设置|draftBackendBase|draftBackendToken/);
     assert.doesNotMatch(source, /getStorageSync|setStorageSync|x-demo-access-token|saveServerSettings/);
-    const page = mountPage((options) => requests.push(options), undefined, undefined, undefined, configuredSource);
+    const page = mountPage((options) => requests.push(options), undefined, undefined, undefined, source, "http://192.168.1.10:8787");
     page.data.connected = false;
     page.onShow();
     assert.equal(requests.length, 1);

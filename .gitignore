@@ -7,3 +7,5 @@ project.private.config.json
 *.log
 verify/*.jpg
 .history
+miniprogram/packages/rebate/config/backend.js
+miniprogram/packages/rebate/config/backend.js.*.tmp
