@@ -4,6 +4,7 @@ import { request as httpRequest } from "node:http";
 import { after, before, test } from "node:test";
 import { createDemo, DemoError, loadConfig, sign, statisticRange } from "../backend/core.mjs";
 import { createServer, listenHost } from "../backend/http.mjs";
+import { operations } from "../backend/queries.mjs";
 
 const env = {
     DEMO_API_BASE_URL: "https://isolated.example.test",
@@ -56,6 +57,74 @@ function upstream(url, options) {
     }
     return Promise.resolve(new Response(JSON.stringify(payload), { status: 200, headers: { "content-type": "application/json" } }));
 }
+
+test("upstream errors describe the operation without exposing private messages", async () => {
+    const cases = [
+        ["link", { material: "123456", platform: "jd" }, "BAD_USER_INPUT", "INPUT", /转链.*平台.*素材/],
+        ["item", { material: "123456", platform: "jd" }, "BAD_USER_INPUT", "INPUT", /商品.*ID/],
+        ["parse", { content: "share" }, "BAD_USER_INPUT", "INPUT", /分享内容/],
+        ["withdraw", { amount: "1.00", withdrawalAccountId: 7 }, "BAD_USER_INPUT", "INPUT", /金额.*余额.*收款账号/],
+        ["createAccount", { type: 1, name: "Test", account: "13800123456" }, "BAD_USER_INPUT", "INPUT", /收款账号/],
+        ["orders", { page: 1 }, "BAD_USER_INPUT", "INPUT", /页码/],
+        ["link", { material: "123456", platform: "jd" }, "FORBIDDEN", "FORBIDDEN", /授权/],
+        ["link", { material: "123456", platform: "jd" }, "NOT_FOUND", "NOT_FOUND", /素材/],
+        ["link", { material: "123456", platform: "jd" }, "CONFLICT", "CONFLICT", /状态/],
+        ["link", { material: "123456", platform: "jd" }, "RATE_LIMITED", "RATE_LIMITED", /频繁/],
+    ];
+    for (const [action, input, upstreamCode, code, message] of cases) {
+        const demo = createDemo(config, (url, options) => JSON.parse(options.body).query === operations[action].query
+            ? Promise.resolve(Response.json({ errors: [{ message: "private-token-account", extensions: { code: upstreamCode } }] }))
+            : upstream(url, options));
+        const { session } = await demo.login();
+        await assert.rejects(demo.request(action, input, session), (error) => {
+            assert.equal(error.code, code);
+            assert.match(error.message, message);
+            assert.doesNotMatch(error.message, /private-token-account/);
+            if (["link", "item", "parse"].includes(action)) assert.doesNotMatch(error.message, /金额|余额|收款/);
+            return true;
+        });
+        if (upstreamCode === "FORBIDDEN") await demo.request("profile", {}, session);
+    }
+});
+
+test("promotion reason codes are allowlisted and withdrawal failures stay uncertain", async () => {
+    for (const [reasonCode, pattern] of [["PRODUCT_ID_MISMATCH", /商品.*平台/], ["PRODUCT_SOURCE_UNSUPPORTED", /不支持/],
+        ["UPSTREAM_TIMEOUT", /超时/], ["PRIVATE_SECRET", /服务配置/]]) {
+        const demo = createDemo(config, (url, options) => JSON.parse(options.body).query === operations.link.query
+            ? Promise.resolve(Response.json({ errors: [{ message: "raw-secret", extensions: { code: "SERVICE_UNAVAILABLE", reasonCode } }] }))
+            : upstream(url, options));
+        const { session } = await demo.login();
+        await assert.rejects(demo.request("link", { material: "123456", platform: "jd" }, session), (error) => {
+            assert.match(error.message, pattern);
+            assert.doesNotMatch(error.message, /raw-secret|PRIVATE_SECRET/);
+            return error.code === "UPSTREAM";
+        });
+    }
+    const demo = createDemo(config, (url, options) => JSON.parse(options.body).query === operations.withdraw.query
+        ? Promise.resolve(Response.json({ errors: [{ extensions: { code: "SERVICE_UNAVAILABLE", reasonCode: "UPSTREAM_TIMEOUT" } }] }))
+        : upstream(url, options));
+    const { session } = await demo.login();
+    await assert.rejects(demo.request("withdraw", { amount: "1.00", withdrawalAccountId: 7 }, session), (error) => error.code === "UNCERTAIN");
+});
+
+test("all public promotion enums, optional null and Unicode lengths reach GraphQL unchanged", async () => {
+    const demo = createDemo(config, upstream);
+    const { session } = await demo.login();
+    const platforms = ["alibaba", "canyin", "dangdang", "didi", "douyin", "eleme", "jd", "kuaishou", "meituan", "meituanCoupon",
+        "pdd", "suning", "taobao", "taopiaopiao", "tongcheng", "vip", "xianyu", "xiaomiyoupin", "xingbake", "yanxuan"];
+    for (const platform of platforms) for (const materialType of [undefined, null, "goods", "activity", "live", "life"]) {
+        await demo.request("link", { material: " 123456 ", platform, materialType }, session);
+        assert.deepEqual(JSON.parse(calls.at(-1).options.body).variables,
+            { material: "123456", platform, ...(materialType ? { materialType } : {}) });
+    }
+    await demo.request("parse", { content: ` ${"😀".repeat(4096)} ` }, session);
+    await demo.request("link", { material: ` ${"😀".repeat(2048)} `, platform: "jd" }, session);
+    for (const input of [{ material: "123456", platform: "1688" }, { material: "123456", platform: "meituan_coupon" },
+        { material: "123456", platform: "douyin", materialType: "invalid" }, { material: "123456", platform: "jd", mallId: "1" },
+        { material: "😀".repeat(2049), platform: "jd" }]) {
+        await assert.rejects(demo.request("link", input, session), (error) => error.code === "INPUT");
+    }
+});
 
 test("validates isolated configuration and signs sorted GraphQL variables", () => {
     assert.throws(() => loadConfig({ ...env, DEMO_API_BASE_URL: "http://example.com" }), /HTTPS/);

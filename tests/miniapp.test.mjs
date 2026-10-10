@@ -22,6 +22,20 @@ const candidate = (itemId, itemUrl = `https://example.test/${itemId}`) => ({
     platform: "jd", type: "goods", keyContent: "same share text", detail: { itemId, itemUrl, itemTitle: `商品 ${itemId}` },
 });
 
+test("promotion errors stay visible without clearing an authorized session", async () => {
+    const page = mountPage((options) => options.success({ statusCode: 400, data: {
+        code: "INPUT", message: "转链参数无效，请检查平台、素材类型和商品 ID 或链接。",
+    } }));
+    page.data.selected = candidate("123456");
+    page.data.selectedType = "goods";
+    page.createLink();
+    await flush();
+    assert.match(page.data.error, /转链参数无效/);
+    assert.doesNotMatch(page.data.error, /金额|余额/);
+    assert.equal(page.data.connected, true);
+    assert.equal(page.session, "local-test-session");
+});
+
 test("rebate package is self-contained and launches from the main debug page", () => {
     const config = JSON.parse(readFileSync(new URL("../miniprogram/app.json", import.meta.url), "utf8"));
     assert.deepEqual(config.pages, ["pages/index/index"]);
