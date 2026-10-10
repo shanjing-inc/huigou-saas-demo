@@ -60,6 +60,8 @@ DEMO_LAN_HOST=192.168.1.10
 | 提示后端未启动或未配置 | 对照后端打印的地址与页面的 `/api/status` 地址，主机和端口必须一致。设置 `DEMO_LAN_HOST` 后只监听该 IP；同步修改 `BACKEND_BASE` 并重新编译。 |
 | 更新后仍是旧行为 | 停止占用 8787 端口的旧后端，再启动。状态响应应有 `supportsAccountManagement: true`。 |
 | 登录或收益统计调用失败 | 确认目标 SaaS 已启用 `/api/graphql/partner`，更新并重启本机后端；旧 `/api/graphql/application` 不再提供服务。`DEMO_API_BASE_URL` 仍填写站点根地址。 |
+| 转链提示参数无效 | 检查平台、素材类型及商品链接／ID，重新解析后选择结果；这不是余额不足提示。 |
+| 提示当前身份无授权 | 核对组织、Team 和商城权限；权限不足不会自动清除 Demo 会话。 |
 
 登录、商品或资金接口报错时，按[接口错误处理](skills/huigou-saas-skills/references/errors.md)排查。
 
